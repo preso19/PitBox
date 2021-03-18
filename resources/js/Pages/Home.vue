@@ -1,21 +1,27 @@
 <template>
     <app-layout>
-        <div class="py-12">
-            <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-                <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg">
+        <div class="flex">
+            <div class="w-1/3">
+                <shop-list></shop-list>
+            </div>
 
-                </div>
+            <div class="w-2/3">
+                <shop-map></shop-map>
             </div>
         </div>
     </app-layout>
 </template>
 
 <script>
+    import ShopMap from '@/Components/ShopMap'
+    import ShopList from '@/Components/ShopList'
     import AppLayout from '@/Layouts/AppLayout'
 
     export default {
         components: {
+            ShopMap,
+            ShopList,
             AppLayout
-        },
+        }
     }
 </script>

@@ -25,5 +25,9 @@
         "vue": "^2.5.17",
         "vue-loader": "^15.9.6",
         "vue-template-compiler": "^2.6.10"
+    },
+    "dependencies": {
+        "@googlemaps/js-api-loader": "^1.11.3",
+        "vue-slick-carousel": "^1.0.6"
     }
 }

@@ -20,4 +20,4 @@ Route::middleware(['auth:sanctum', 'verified'])->get('/', function () {
         'canLogin' => Route::has('login'),
         'canRegister' => Route::has('register'),
     ]);
-})->name('dashboard');
+})->name('home');
