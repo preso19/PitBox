@@ -8,6 +8,10 @@
         </VueSlickCarousel>
 
         <h1>NAME HERE</h1>
+
+        <p>My shop is amazing</p>
+
+        <button>Reserve</button>
     </div>
 </template>
 
