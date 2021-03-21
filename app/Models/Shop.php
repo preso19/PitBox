@@ -19,5 +19,13 @@ class Shop extends Model implements HasMedia
      */
     protected $fillable = [
         'name',
+        'address',
+        'description',
+        'lat',
+        'lng'
     ];
+
+    public function owner(): \Illuminate\Database\Eloquent\Relations\BelongsTo {
+        return $this->belongsTo(User::class);
+    }
 }
