@@ -7,8 +7,11 @@
 
         <title>{{ config('app.name', 'Laravel') }}</title>
 
-        <!-- Fonts -->
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap">
+        <link rel="preconnect" href="https://fonts.gstatic.com">
+        <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@200;400;600;800&display=swap" rel="stylesheet">
+
+        <!-- Font Aweasome -->
+        <script src="https://kit.fontawesome.com/36986c621f.js" crossorigin="anonymous"></script>
 
         <!-- Styles -->
         <link rel="stylesheet" href="{{ mix('css/app.css') }}">

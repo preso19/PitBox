@@ -1,10 +1,12 @@
 <template>
-    <div class="flex flex-col">
-        <loader v-if="loading"></loader>
+    <div>
+        <loader class="mx-auto" v-if="loading"></loader>
 
-        <template v-else v-for="shop in shops">
-            <single-shop :shop="shop" :key="shop.id"></single-shop>
-        </template>
+        <div class="grid grid-cols-2 gap-4" v-else>
+            <template v-for="shop in shops">
+                <single-shop :shop="shop" :key="shop.id"></single-shop>
+            </template>
+        </div>
     </div>
 </template>
 

@@ -1,0 +1,31 @@
+.custom-carousel .slick-slider {
+    position: relative;
+}
+
+.custom-carousel .slick-slider .slick-arrow {
+    font-size: 0;
+    position: absolute;
+    z-index: 10;
+    top: calc(50% - 15px);
+    right: 10px;
+}
+
+.custom-carousel .slick-slider .slick-arrow:after {
+    content: '\f054';
+    font-family: 'FontAwesome';
+    font-size: 20px;
+    transition: .3s;
+}
+
+.custom-carousel .slick-slider .slick-arrow:hover:after {
+    color: rgb(129, 140, 248);
+}
+
+.custom-carousel .slick-slider .slick-arrow.slick-prev:after {
+    content: '\f053';
+}
+
+.custom-carousel .slick-slider .slick-arrow.slick-prev {
+    right: auto;
+    left: 10px;
+}
