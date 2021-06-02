@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
+use App\Models\User;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 class AdminUserSeeder extends Seeder
@@ -15,10 +15,12 @@ class AdminUserSeeder extends Seeder
      */
     public function run()
     {
-        DB::table('users')->insert([
+        $user = User::factory()->create([
             'name' => 'Admin',
             'email' => 'admin@pitstop.com',
             'password' => Hash::make('demo'),
         ]);
+
+        $user->assignRole('admin');
     }
 }

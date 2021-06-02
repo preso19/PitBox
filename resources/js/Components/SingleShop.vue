@@ -12,15 +12,23 @@
         <div class="p-4">
             <div class="flex flex-row justify-between">
                 <h1 class="text-xl text-indigo-400 font-bold">{{ shop.name }}</h1>
-
-                <a :href="`https://www.google.com/maps/dir/?api=1&destination=${shop.lat},${shop.lng}`" class="text-xl text-indigo-400 hover:text-black transition duration-300" target="_blank">
-                    <i class="fas fa-directions"></i>
-                </a>
             </div>
 
-            <p v-if="shop.description">{{ shop.description }}</p>
+            <p v-if="shop.description">
+                {{ shop.description }}
+            </p>
 
-            <button>Reserve</button>
+            <div class="flex justify-between">
+                <button class="mt-4 py-2 px-4 border border-transparent shadow-sm text-sm rounded-md font-bold text-white bg-indigo-400 hover:bg-indigo-700">
+                    Reserve
+                </button>
+
+                <a :href="`https://www.google.com/maps/dir/?api=1&destination=${shop.lat},${shop.lng}`" target="_blank">
+                    <button class="mt-4 py-2 px-4 border border-transparent shadow-sm text-sm rounded-md font-bold text-white bg-indigo-400 hover:bg-indigo-700">
+                        Directions <i class="fas fa-directions ml-2"></i>
+                    </button>
+                </a>
+            </div>
         </div>
     </div>
 </template>

@@ -2924,6 +2924,14 @@ __webpack_require__.r(__webpack_exports__);
 //
 //
 //
+//
+//
+//
+//
+//
+//
+//
+//
 
 
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = ({
@@ -30997,13 +31005,30 @@ var render = function() {
         _c("div", { staticClass: "flex flex-row justify-between" }, [
           _c("h1", { staticClass: "text-xl text-indigo-400 font-bold" }, [
             _vm._v(_vm._s(_vm.shop.name))
-          ]),
+          ])
+        ]),
+        _vm._v(" "),
+        _vm.shop.description
+          ? _c("p", [
+              _vm._v(
+                "\n            " + _vm._s(_vm.shop.description) + "\n        "
+              )
+            ])
+          : _vm._e(),
+        _vm._v(" "),
+        _c("div", { staticClass: "flex justify-between" }, [
+          _c(
+            "button",
+            {
+              staticClass:
+                "mt-4 py-2 px-4 border border-transparent shadow-sm text-sm rounded-md font-bold text-white bg-indigo-400 hover:bg-indigo-700"
+            },
+            [_vm._v("\n                Reserve\n            ")]
+          ),
           _vm._v(" "),
           _c(
             "a",
             {
-              staticClass:
-                "text-xl text-indigo-400 hover:text-black transition duration-300",
               attrs: {
                 href:
                   "https://www.google.com/maps/dir/?api=1&destination=" +
@@ -31013,20 +31038,31 @@ var render = function() {
                 target: "_blank"
               }
             },
-            [_c("i", { staticClass: "fas fa-directions" })]
+            [_vm._m(0)]
           )
-        ]),
-        _vm._v(" "),
-        _vm.shop.description
-          ? _c("p", [_vm._v(_vm._s(_vm.shop.description))])
-          : _vm._e(),
-        _vm._v(" "),
-        _c("button", [_vm._v("Reserve")])
+        ])
       ])
     ]
   )
 }
-var staticRenderFns = []
+var staticRenderFns = [
+  function() {
+    var _vm = this
+    var _h = _vm.$createElement
+    var _c = _vm._self._c || _h
+    return _c(
+      "button",
+      {
+        staticClass:
+          "mt-4 py-2 px-4 border border-transparent shadow-sm text-sm rounded-md font-bold text-white bg-indigo-400 hover:bg-indigo-700"
+      },
+      [
+        _vm._v("\n                    Directions "),
+        _c("i", { staticClass: "fas fa-directions ml-2" })
+      ]
+    )
+  }
+]
 render._withStripped = true
 
 
