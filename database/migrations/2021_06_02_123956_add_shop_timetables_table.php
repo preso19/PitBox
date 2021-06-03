@@ -15,13 +15,11 @@ class AddShopTimetablesTable extends Migration
     {
         Schema::create('shop_timetables', function (Blueprint $table) {
             $table->id();
-
             $table->unsignedBigInteger('shop_id');
             $table->foreign('shop_id')
                 ->references('id')
                 ->on('shops')
                 ->onDelete('cascade');
-
             $table->boolean('monday')->default(false);
             $table->boolean('tuesday')->default(false);
             $table->boolean('wednesday')->default(false);

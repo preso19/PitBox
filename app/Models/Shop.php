@@ -25,7 +25,12 @@ class Shop extends Model implements HasMedia
         'lng'
     ];
 
-    public function owner(): \Illuminate\Database\Eloquent\Relations\BelongsTo {
+    /**
+     * Shop owner
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     */
+    public function owner() {
         return $this->belongsTo(User::class);
     }
 }
