@@ -59,4 +59,11 @@ class User extends Authenticatable
     protected $appends = [
         'profile_photo_url',
     ];
+
+    /**
+     * Users Shop
+     */
+    public function shop() {
+        return $this->hasOne(Shop::class, 'owner_id');
+    }
 }

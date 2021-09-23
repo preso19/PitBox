@@ -20,8 +20,9 @@ mix.js('resources/js/app.js', 'public/js').vue()
     .copy( 'resources/images/', 'public/images/' )
     .webpackConfig(require('./webpack.config'))
     .browserSync({
-        proxy: 'http://127.0.0.1:8000/'
-    });
+        proxy: 'http://pitbox.test/'
+    })
+    .disableSuccessNotifications();
 
 if (mix.inProduction()) {
     mix.version();

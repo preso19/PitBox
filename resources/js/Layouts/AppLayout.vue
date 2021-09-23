@@ -20,6 +20,10 @@
                                 <jet-nav-link :href="route('home')" :active="route().current('home')">
                                     Home
                                 </jet-nav-link>
+
+                                <jet-nav-link :href="route('my-shop')" :active="route().current('my-shop')" v-if="$page.props.userRole !== 'client'">
+                                    My Shop
+                                </jet-nav-link>
                             </div>
                         </div>
 

@@ -5,7 +5,7 @@
 </template>
 
 <script>
-    import ShopList from '@/Components/ShopList'
+    import ShopList from '@/Components/Home/ShopList'
     import AppLayout from '@/Layouts/AppLayout'
 
     export default {

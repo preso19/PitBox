@@ -12,7 +12,7 @@
 
 <script>
 import Loader from '@/Components/Common/Loader'
-import SingleShop from '@/Components/SingleShop'
+import SingleShop from '@/Components/Home/SingleShop'
 
 export default {
     name: 'ShopList',

@@ -14,7 +14,9 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::get('/shops', 'ShopController@fetch');
+Route::get('/shops', 'ShopController@fetch')->name('fetch.shops');
+
+Route::put('/shop/{shop}')->name('update.shop');
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
