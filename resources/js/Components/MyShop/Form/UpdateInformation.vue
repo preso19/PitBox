@@ -65,19 +65,21 @@
         data() {
             return {
                 form: this.$inertia.form({
-                    _method: 'PUT',
-                    name: this.shop.name,
-                    description: this.shop.description,
-                })
+                    email: null,
+                    password: null,
+                    remember: false,
+                }),
             }
         },
 
         methods: {
             updateShopInformation() {
-                this.form.post(route('update.shop'), {
-                    errorBag: 'updateShopInformation',
-                    preserveScroll: true
-                });
+
+
+                // this.form.put(route('update.shop', this.shop.id), {
+                //     errorBag: 'updateShopInformation',
+                //     preserveScroll: true
+                // });
             },
         },
     }

@@ -24,9 +24,11 @@
             AppLayout
         },
 
-        data: () => ({
-            isEditing: false,
-        }),
+        data() {
+            return {
+                isEditing: false,
+            }
+        },
 
         methods: {
             editShop: function () {

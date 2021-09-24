@@ -22,10 +22,12 @@ export default {
         SingleShop
     },
 
-    data: () => ({
-        loading: true,
-        shops: []
-    }),
+    data() {
+        return {
+            loading: true,
+            shops: []
+        }
+    },
 
     mounted() {
         this.loadShops()
