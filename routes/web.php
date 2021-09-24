@@ -29,4 +29,10 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
             'userShop' => Auth::user()->shop
         ]);
     })->name('my-shop');
+
+    Route::get('/edit-shop', function () {
+        return Inertia::render('EditShop', [
+            'userShop' => Auth::user()->shop
+        ]);
+    })->name('edit-shop');
 });

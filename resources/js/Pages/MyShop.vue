@@ -1,38 +1,32 @@
 <template>
     <app-layout>
-        <shop-main
-            v-if="$page.props.userShop && !isEditing" :shop="$page.props.userShop"
-            @editShop="editShop"
-        ></shop-main>
+        <div class="grid grid-cols-2 gap-4">
+            <single-shop :shop="$page.props.userShop"></single-shop>
 
-        <shop-form
-            v-else
-            :shop="$page.props.userShop"
-        ></shop-form>
+            <div class="p-4 mb-4 bg-white shadow-md rounded-3xl">
+                <h1>Here add calendar maybe?</h1>
+
+                <button @click.prevent="editShop()" class="mt-4 py-2 px-4 border border-transparent shadow-sm text-sm rounded-md font-bold text-white bg-indigo-400 hover:bg-indigo-700">
+                    Edit Shop
+                </button>
+            </div>
+        </div>
     </app-layout>
 </template>
 
 <script>
     import AppLayout from '@/Layouts/AppLayout'
-    import ShopMain from '@/Components/MyShop/ShopMain'
-    import ShopForm from '@/Components/MyShop/ShopForm'
+    import SingleShop from '@/Components/Home/SingleShop';
 
     export default {
         components: {
-            ShopMain,
-            ShopForm,
-            AppLayout
-        },
-
-        data() {
-            return {
-                isEditing: false,
-            }
+            AppLayout,
+            SingleShop
         },
 
         methods: {
-            editShop: function () {
-                this.isEditing = true;
+            editShop: function() {
+                // ROUTE TO EDIT SHOP PAGE
             }
         }
     }

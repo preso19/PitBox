@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Shop;
 use Illuminate\Http\Request;
-use App\Http\Requests\ShopUpdateRequest;
+use Illuminate\Support\Facades\Redirect;
 
 class ShopController extends Controller
 {
@@ -12,14 +12,17 @@ class ShopController extends Controller
         return Shop::all();
     }
 
-    public function update(ShopUpdateRequest $request, Shop $shop) {
-        $validated = $request->validated();
-
-        $shop->update([
-            'name' => $validated['name'],
-            'description' => $validated['description']
+    public function update(Request $request, Shop $shop) {
+        $validatedData = $request->validateWithBag('updateShopInformation', [
+            'name' => 'required',
+            'description' => 'max:255',
         ]);
 
-        return response('Success!', 200);
+        $shop->forceFill([
+            'name' => $validatedData['name'],
+            'description' => $validatedData['description'],
+        ])->save();
+
+        return redirect();
     }
 }
