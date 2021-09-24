@@ -23,6 +23,6 @@ class ShopController extends Controller
             'description' => $validatedData['description'],
         ])->save();
 
-        return redirect();
+        return Redirect::route('edit-shop');
     }
 }

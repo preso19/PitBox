@@ -3254,7 +3254,7 @@ __webpack_require__.r(__webpack_exports__);
   },
   methods: {
     updateShopInformation: function updateShopInformation() {
-      this.form.put(route('update.shop', this.shop.id), {
+      this.form.post(route('update.shop', this.shop.id), {
         errorBag: 'updateShopInformation',
         preserveScroll: true
       });
@@ -5640,10 +5640,6 @@ __webpack_require__.r(__webpack_exports__);
   components: {
     AppLayout: _Layouts_AppLayout__WEBPACK_IMPORTED_MODULE_0__["default"],
     SingleShop: _Components_Home_SingleShop__WEBPACK_IMPORTED_MODULE_1__["default"]
-  },
-  methods: {
-    editShop: function editShop() {// ROUTE TO EDIT SHOP PAGE
-    }
   }
 });
 
@@ -36510,24 +36506,24 @@ var render = function() {
       [
         _c("single-shop", { attrs: { shop: _vm.$page.props.userShop } }),
         _vm._v(" "),
-        _c("div", { staticClass: "p-4 mb-4 bg-white shadow-md rounded-3xl" }, [
-          _c("h1", [_vm._v("Here add calendar maybe?")]),
-          _vm._v(" "),
-          _c(
-            "button",
-            {
-              staticClass:
-                "mt-4 py-2 px-4 border border-transparent shadow-sm text-sm rounded-md font-bold text-white bg-indigo-400 hover:bg-indigo-700",
-              on: {
-                click: function($event) {
-                  $event.preventDefault()
-                  return _vm.editShop()
-                }
-              }
-            },
-            [_vm._v("\n                Edit Shop\n            ")]
-          )
-        ])
+        _c(
+          "div",
+          { staticClass: "p-4 mb-4 bg-white shadow-md rounded-3xl" },
+          [
+            _c("h1", [_vm._v("Here add calendar maybe?")]),
+            _vm._v(" "),
+            _c(
+              "inertia-link",
+              {
+                staticClass:
+                  "mt-4 py-2 px-4 border border-transparent shadow-sm text-sm rounded-md font-bold text-white bg-indigo-400 hover:bg-indigo-700",
+                attrs: { href: _vm.route("edit-shop") }
+              },
+              [_vm._v("\n                Edit Shop\n            ")]
+            )
+          ],
+          1
+        )
       ],
       1
     )
