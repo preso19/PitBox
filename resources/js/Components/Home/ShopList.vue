@@ -35,7 +35,7 @@ export default {
 
     methods: {
         loadShops() {
-            axios.get('/api/shops').then((response) => {
+            axios.get('/shops').then((response) => {
                 this.shops = response.data
             }).catch((error) => {
                 console.error(error)

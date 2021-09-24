@@ -16,6 +16,10 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::middleware(['auth:sanctum', 'verified'])->group(function () {
+    Route::get('/shops', 'ShopController@fetch')->name('fetch.shops');
+
+    Route::post('/shop/{shop}', 'ShopController@update')->name('update.shop');
+
     Route::get('/', function () {
         return Inertia::render('Home', [
             'canLogin' => Route::has('login'),

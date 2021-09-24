@@ -74,7 +74,6 @@
         methods: {
             updateShopInformation() {
                 this.form.post(route('update.shop', this.shop.id), {
-                    errorBag: 'updateShopInformation',
                     preserveScroll: true
                 });
             },

@@ -3089,7 +3089,7 @@ __webpack_require__.r(__webpack_exports__);
     loadShops: function loadShops() {
       var _this = this;
 
-      axios.get('/api/shops').then(function (response) {
+      axios.get('/shops').then(function (response) {
         _this.shops = response.data;
       })["catch"](function (error) {
         console.error(error);
@@ -3255,7 +3255,6 @@ __webpack_require__.r(__webpack_exports__);
   methods: {
     updateShopInformation: function updateShopInformation() {
       this.form.post(route('update.shop', this.shop.id), {
-        errorBag: 'updateShopInformation',
         preserveScroll: true
       });
     }
