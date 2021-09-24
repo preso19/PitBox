@@ -5633,13 +5633,22 @@ __webpack_require__.r(__webpack_exports__);
 //
 //
 //
+//
+//
+//
+//
+//
+//
+//
+//
 
 
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = ({
   components: {
     AppLayout: _Layouts_AppLayout__WEBPACK_IMPORTED_MODULE_0__["default"],
     SingleShop: _Components_Home_SingleShop__WEBPACK_IMPORTED_MODULE_1__["default"]
-  }
+  },
+  methods: {}
 });
 
 /***/ }),
@@ -36499,33 +36508,52 @@ var render = function() {
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
   return _c("app-layout", [
-    _c(
-      "div",
-      { staticClass: "grid grid-cols-2 gap-4" },
-      [
-        _c("single-shop", { attrs: { shop: _vm.$page.props.userShop } }),
-        _vm._v(" "),
-        _c(
+    _vm.$page.props.userShop
+      ? _c(
           "div",
-          { staticClass: "p-4 mb-4 bg-white shadow-md rounded-3xl" },
+          { staticClass: "grid grid-cols-2 gap-4" },
           [
-            _c("h1", [_vm._v("Here add calendar maybe?")]),
+            _c("single-shop", { attrs: { shop: _vm.$page.props.userShop } }),
             _vm._v(" "),
             _c(
-              "inertia-link",
-              {
-                staticClass:
-                  "mt-4 py-2 px-4 border border-transparent shadow-sm text-sm rounded-md font-bold text-white bg-indigo-400 hover:bg-indigo-700",
-                attrs: { href: _vm.route("edit-shop") }
-              },
-              [_vm._v("\n                Edit Shop\n            ")]
+              "div",
+              { staticClass: "p-4 mb-4 bg-white shadow-md rounded-3xl" },
+              [
+                _c("h1", [_vm._v("Here add calendar maybe?")]),
+                _vm._v(" "),
+                _c(
+                  "inertia-link",
+                  {
+                    staticClass:
+                      "mt-4 py-2 px-4 border border-transparent shadow-sm text-sm rounded-md font-bold text-white bg-indigo-400 hover:bg-indigo-700",
+                    attrs: { href: _vm.route("edit-shop") }
+                  },
+                  [_vm._v("\n                Edit Shop\n            ")]
+                )
+              ],
+              1
             )
           ],
           1
         )
-      ],
-      1
-    )
+      : _c("div", { staticClass: "grid grid-cols-2 gap-4" }, [
+          _c("h2", [_vm._v("You don't have a shop!")]),
+          _vm._v(" "),
+          _c(
+            "button",
+            {
+              staticClass:
+                "mt-4 py-2 px-4 border border-transparent shadow-sm text-sm rounded-md font-bold text-white bg-indigo-400 hover:bg-indigo-700",
+              on: {
+                click: function($event) {
+                  $event.preventDefault()
+                  return _vm.createShop()
+                }
+              }
+            },
+            [_vm._v("\n            Create Shop\n        ")]
+          )
+        ])
   ])
 }
 var staticRenderFns = []
