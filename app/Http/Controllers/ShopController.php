@@ -4,14 +4,21 @@ namespace App\Http\Controllers;
 
 use App\Models\Shop;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Request as RequestTest;
 
 class ShopController extends Controller
 {
-    public function fetch(Request $request) {
-        return Shop::all();
+    public function create(Request $request, Shop $shop) {
+        $shop = Shop::create([
+            'name' => 'Temporary Shop Name',
+            'description' => 'Temporary Shop Description',
+        ]);
+
+        $shop->owner()->attach(Auth::user());
+
+        return Redirect::route('edit-shop');
     }
 
     public function update(Request $request, Shop $shop) {

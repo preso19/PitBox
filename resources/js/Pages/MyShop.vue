@@ -33,7 +33,11 @@
         },
 
         methods: {
+            createShop() {
+                let form = this.$inertia.form({});
 
+                form.post(route('create.shop'))
+            }
         }
     }
 </script>

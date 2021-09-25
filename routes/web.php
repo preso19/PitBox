@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Shop;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -16,15 +17,16 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::middleware(['auth:sanctum', 'verified'])->group(function () {
-    Route::get('/shops', 'ShopController@fetch')->name('fetch.shops');
+    Route::post('/shop/{shop}', 'ShopController@create')->name('create.shop');
 
-    Route::post('/shop/{shop}', 'ShopController@update')->name('update.shop');
+    Route::put('/shop/{shop}', 'ShopController@update')->name('update.shop');
 
     Route::get('/', function () {
         return Inertia::render('Home', [
             'canLogin' => Route::has('login'),
             'canRegister' => Route::has('register'),
             'userRole' => Auth::user()->roles->pluck('name')->first(),
+            'shops' => Shop::all(),
         ]);
     })->name('home');
 
