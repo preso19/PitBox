@@ -37,4 +37,20 @@ class ShopController extends Controller
 
         return Redirect::route('edit-shop');
     }
+
+    public function updateLocation(Request $request, Shop $shop) {
+        $data = $request->all();
+
+        Validator::make($data, [
+            'lat' => 'required',
+            'lng' => 'required',
+        ])->validate();
+
+        $shop->forceFill([
+            'lat' => $data['lat'],
+            'lng' => $data['lng'],
+        ])->save();
+
+        return Redirect::route('edit-shop');
+    }
 }

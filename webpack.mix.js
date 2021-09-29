@@ -20,7 +20,8 @@ mix.js('resources/js/app.js', 'public/js').vue()
     .copy( 'resources/images/', 'public/images/' )
     .webpackConfig(require('./webpack.config'))
     .browserSync({
-        proxy: 'http://pitbox.test/'
+        proxy: 'pitbox.test',
+        open: false,
     })
     .disableSuccessNotifications();
 

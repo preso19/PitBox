@@ -5,6 +5,10 @@
                 <update-information :shop="$page.props.userShop" />
 
                 <jet-section-border />
+
+                <update-location :shop="$page.props.userShop" />
+
+                <jet-section-border />
             </div>
         </div>
     </app-layout>
@@ -13,13 +17,15 @@
 <script>
     import AppLayout from '@/Layouts/AppLayout'
     import JetSectionBorder from '@/Jetstream/SectionBorder'
-    import UpdateInformation from '@/Components/MyShop/Form/UpdateInformation'
+    import UpdateInformation from '@/Components/EditShop/UpdateInformation'
+    import UpdateLocation from '@/Components/EditShop/UpdateLocation'
 
     export default {
         components: {
             AppLayout,
             JetSectionBorder,
-            UpdateInformation
+            UpdateInformation,
+            UpdateLocation
         }
     }
 </script>

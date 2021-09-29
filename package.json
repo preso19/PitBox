@@ -29,6 +29,7 @@
         "vue-template-compiler": "^2.6.10"
     },
     "dependencies": {
-        "vue-slick-carousel": "^1.0.6"
+        "vue-slick-carousel": "^1.0.6",
+        "vue2-google-maps": "^0.10.7"
     }
 }

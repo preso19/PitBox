@@ -21,6 +21,8 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
 
     Route::put('/shop/{shop}', 'ShopController@update')->name('update.shop');
 
+    Route::put('/shop/{shop}/location', 'ShopController@updateLocation')->name('update.shop.location');
+
     Route::get('/', function () {
         return Inertia::render('Home', [
             'canLogin' => Route::has('login'),
