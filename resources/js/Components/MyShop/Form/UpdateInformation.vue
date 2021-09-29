@@ -73,7 +73,7 @@
 
         methods: {
             updateShopInformation() {
-                this.form.post(route('update.shop', this.shop.id), {
+                this.form.put(route('update.shop', this.shop.id), {
                     preserveScroll: true
                 });
             },

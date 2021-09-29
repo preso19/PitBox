@@ -3155,7 +3155,7 @@ __webpack_require__.r(__webpack_exports__);
   },
   methods: {
     updateShopInformation: function updateShopInformation() {
-      this.form.post(route('update.shop', this.shop.id), {
+      this.form.put(route('update.shop', this.shop.id), {
         preserveScroll: true
       });
     }
