@@ -16,7 +16,8 @@ class ShopController extends Controller
             'description' => 'Temporary Shop Description',
         ]);
 
-        $shop->owner()->attach(Auth::user());
+        $shop->owner()->associate(Auth::user());
+        $shop->save();
 
         return Redirect::route('edit-shop');
     }
