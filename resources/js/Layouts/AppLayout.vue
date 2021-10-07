@@ -24,6 +24,10 @@
                                 <jet-nav-link :href="route('my-shop')" :active="route().current('my-shop')" v-if="$page.props.userRole !== 'client'">
                                     My Shop
                                 </jet-nav-link>
+
+                                <jet-nav-link :href="route('appointments')" :active="route().current('appointments')">
+                                    Appointments
+                                </jet-nav-link>
                             </div>
                         </div>
 

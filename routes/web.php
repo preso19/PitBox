@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Shop;
+use App\Models\User;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -43,4 +44,10 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
             'userShop' => Auth::user()->shop
         ]);
     })->name('edit-shop');
+
+    Route::get('/appointments', function () {
+        return Inertia::render('Appointments', [
+            'userAppointments' => User::with(['appointments'])->find(Auth::id()),
+        ]);
+    })->name('appointments');
 });

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Appointment;
 use Spatie\MediaLibrary\HasMedia;
 use Illuminate\Database\Eloquent\Model;
 use Spatie\MediaLibrary\InteractsWithMedia;
@@ -32,5 +33,14 @@ class Shop extends Model implements HasMedia
      */
     public function owner() {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Shop appointments
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
+     */
+    public function appointments() {
+        return $this->belongsToMany(Appointment::class);
     }
 }

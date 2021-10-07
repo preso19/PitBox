@@ -2193,6 +2193,7 @@ select {
 }
 
 .sticky {
+  position: -webkit-sticky;
   position: sticky;
 }
 
@@ -34921,6 +34922,7 @@ button:focus, input:focus, textarea:focus, select:focus{
   }
 
   .sm\:sticky {
+    position: -webkit-sticky;
     position: sticky;
   }
 
@@ -67493,6 +67495,7 @@ button:focus, input:focus, textarea:focus, select:focus{
   }
 
   .md\:sticky {
+    position: -webkit-sticky;
     position: sticky;
   }
 
@@ -100065,6 +100068,7 @@ button:focus, input:focus, textarea:focus, select:focus{
   }
 
   .lg\:sticky {
+    position: -webkit-sticky;
     position: sticky;
   }
 
@@ -132637,6 +132641,7 @@ button:focus, input:focus, textarea:focus, select:focus{
   }
 
   .xl\:sticky {
+    position: -webkit-sticky;
     position: sticky;
   }
 
@@ -165209,6 +165214,7 @@ button:focus, input:focus, textarea:focus, select:focus{
   }
 
   .\32xl\:sticky {
+    position: -webkit-sticky;
     position: sticky;
   }
 

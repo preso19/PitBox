@@ -66,4 +66,11 @@ class User extends Authenticatable
     public function shop() {
         return $this->hasOne(Shop::class, 'owner_id');
     }
+
+    /**
+     * Users appointments
+     */
+    public function appointments() {
+        return $this->hasMany(Appointment::class);
+    }
 }
