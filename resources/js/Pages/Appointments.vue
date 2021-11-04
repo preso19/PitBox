@@ -2,11 +2,11 @@
     <app-layout>
         <div class="grid grid-cols-2 gap-4" v-if="$page.props.userAppointments">
             <div class="p-4 mb-4 bg-white shadow-md rounded-3xl">
-                <!-- <appointments-list><appointments-list> -->
+                <appointments-list @updateChat="dsadsa"><appointments-list>
             </div>
 
             <div class="p-4 mb-4 bg-white shadow-md rounded-3xl">
-                <!-- <appointment-form></appointment-form> -->
+                <appointment-form :service="shopID2"></appointment-form>
             </div>
         </div>
 
@@ -18,20 +18,12 @@
 
 <script>
     import AppLayout from '@/Layouts/AppLayout'
-    import SingleShop from '@/Components/Home/SingleShop';
 
     export default {
         components: {
-            AppLayout,
-            SingleShop
+            AppLayout
         },
-        // $page.props.userAppointments
-        methods: {
-            createShop() {
-                let form = this.$inertia.form({});
 
-                form.post(route('create.shop'))
-            }
-        }
+        // $page.props.userAppointments
     }
 </script>

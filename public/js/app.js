@@ -4881,7 +4881,6 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
 /* harmony import */ var _Layouts_AppLayout__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @/Layouts/AppLayout */ "./resources/js/Layouts/AppLayout.vue");
-/* harmony import */ var _Components_Home_SingleShop__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @/Components/Home/SingleShop */ "./resources/js/Components/Home/SingleShop.vue");
 //
 //
 //
@@ -4900,20 +4899,12 @@ __webpack_require__.r(__webpack_exports__);
 //
 //
 //
-
 
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = ({
   components: {
-    AppLayout: _Layouts_AppLayout__WEBPACK_IMPORTED_MODULE_0__["default"],
-    SingleShop: _Components_Home_SingleShop__WEBPACK_IMPORTED_MODULE_1__["default"]
-  },
-  // $page.props.userAppointments
-  methods: {
-    createShop: function createShop() {
-      var form = this.$inertia.form({});
-      form.post(route('create.shop'));
-    }
-  }
+    AppLayout: _Layouts_AppLayout__WEBPACK_IMPORTED_MODULE_0__["default"]
+  } // $page.props.userAppointments
+
 });
 
 /***/ }),
@@ -36230,28 +36221,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
-  var _vm = this
-  var _h = _vm.$createElement
-  var _c = _vm._self._c || _h
-  return _c("app-layout", [
-    _vm.$page.props.userAppointments
-      ? _c("div", { staticClass: "grid grid-cols-2 gap-4" }, [
-          _c("div", { staticClass: "p-4 mb-4 bg-white shadow-md rounded-3xl" }),
-          _vm._v(" "),
-          _c("div", { staticClass: "p-4 mb-4 bg-white shadow-md rounded-3xl" })
-        ])
-      : _c("div", { staticClass: "grid grid-cols-2 gap-4" }, [
-          _c("h2", [
-            _vm._v(
-              "You don't have any appointments go to the home page to create some"
-            )
-          ])
-        ])
-  ])
-}
+var render = function () {}
 var staticRenderFns = []
-render._withStripped = true
 
 
 
