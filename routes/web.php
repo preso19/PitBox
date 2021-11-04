@@ -3,6 +3,8 @@
 use App\Models\Shop;
 use App\Models\User;
 use Inertia\Inertia;
+use App\Models\Appointment;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -47,7 +49,15 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
 
     Route::get('/appointments', function () {
         return Inertia::render('Appointments', [
-            'userAppointments' => User::with(['appointments'])->find(Auth::id()),
+            'userAppointments' => Auth::user()->appointments,
+            'newAppointment' => Inertia::lazy(function () {
+                return new Appointment([
+                    'start' => Carbon::now()->toDateTimeString()
+                ]);
+            }),
+            'newAppointmentShop' => Inertia::lazy(function () {
+                return Shop::findOrFail(request('shop'));
+            }),
         ]);
     })->name('appointments');
 });

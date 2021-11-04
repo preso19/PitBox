@@ -19,7 +19,7 @@ class CreateAppointmentsTable extends Migration
             $table->dateTime('end')->nullable();
             $table->unsignedInteger('duration')->nullable();
             $table->string('duration_type')->nullable(); // Duration type can be: minutes, hours, days, weeks, months
-            $table->string('state'); // State can be: requestedByClient, requestedByMechanic, approved, finished
+            $table->enum('state', ['created', 'requestedByClient', 'requestedByMechanic', 'approved', 'finished']);
             $table->timestamps();
         });
     }

@@ -54,7 +54,7 @@
 </template>
 
 <script>
-export default {
-    name: 'Loader'
-}
+    export default {
+        name: 'Loader'
+    }
 </script>

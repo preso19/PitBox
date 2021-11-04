@@ -19,9 +19,9 @@
             </p>
 
             <div class="flex justify-between">
-                <button class="mt-4 py-2 px-4 border border-transparent shadow-sm text-sm rounded-md font-bold text-white bg-indigo-400 hover:bg-indigo-700">
+                <inertia-link :href="route('appointments')" :data="{ newAppointmentShop: this.shop.id }" class="mt-4 py-2 px-4 border border-transparent shadow-sm text-sm rounded-md font-bold text-white bg-indigo-400 hover:bg-indigo-700">
                     Reserve
-                </button>
+                </inertia-link>
 
                 <a :href="`https://www.google.com/maps/dir/?api=1&destination=${shop.lat},${shop.lng}`" target="_blank">
                     <button class="mt-4 py-2 px-4 border border-transparent shadow-sm text-sm rounded-md font-bold text-white bg-indigo-400 hover:bg-indigo-700">
