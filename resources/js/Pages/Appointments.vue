@@ -1,12 +1,18 @@
 <template>
     <app-layout>
-        <div class="grid grid-cols-2 gap-4" v-if="$page.props.userAppointments > 0">
+        <div class="grid grid-cols-2 gap-4" v-if="$page.props.userAppointments > 0 || $page.props.newAppointment">
             <div class="p-4 mb-4 bg-white shadow-md rounded-3xl">
-                <appointments-list></appointments-list>
+                <appointments-list
+                    :userAppointments="$page.props.userAppointments"
+                    :newAppointment="$page.props.newAppointment"
+                    :newAppointmentShop="$page.props.newAppointmentShop"
+                ></appointments-list>
             </div>
 
             <div class="p-4 mb-4 bg-white shadow-md rounded-3xl">
-                <appointments-form></appointments-form>
+                <appointments-form v-if="$page.props.newAppointment"></appointments-form>
+
+                <appointment-chat v-else :selected="selected"></appointment-chat>
             </div>
         </div>
 
@@ -22,20 +28,26 @@
     import AppLayout from '@/Layouts/AppLayout'
     import AppointmentsList from '@/Components/Appointments/List'
     import AppointmentsForm from '@/Components/Appointments/Form'
+    import AppointmentsChat from '@/Components/Appointments/Chat'
 
     export default {
         components: {
             AppLayout,
             AppointmentsList,
-            AppointmentsForm
+            AppointmentsForm,
+            AppointmentsChat
         },
 
         props: {
-            newAppointment: String
+            newAppointment: Boolean,
+            userAppointments: Array,
+            newAppointmentShop: Object
         },
 
-        created() {
-            console.log(this.newAppointment);
-        }
+        data() {
+            return {
+                selected: null,
+            }
+        },
     }
 </script>

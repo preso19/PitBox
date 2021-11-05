@@ -19,7 +19,7 @@
             </p>
 
             <div class="flex justify-between">
-                <inertia-link :href="route('appointments')" :data="{ newAppointmentShop: this.shop.id }" class="mt-4 py-2 px-4 border border-transparent shadow-sm text-sm rounded-md font-bold text-white bg-indigo-400 hover:bg-indigo-700">
+                <inertia-link :href="route('appointments')" :data="{ shop: this.shop.id }" class="mt-4 py-2 px-4 border border-transparent shadow-sm text-sm rounded-md font-bold text-white bg-indigo-400 hover:bg-indigo-700">
                     Reserve
                 </inertia-link>
 

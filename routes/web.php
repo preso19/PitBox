@@ -50,14 +50,8 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     Route::get('/appointments', function () {
         return Inertia::render('Appointments', [
             'userAppointments' => Auth::user()->appointments,
-            'newAppointment' => Inertia::lazy(function () {
-                return new Appointment([
-                    'start' => Carbon::now()->toDateTimeString()
-                ]);
-            }),
-            'newAppointmentShop' => Inertia::lazy(function () {
-                return Shop::findOrFail(request('shop'));
-            }),
+            'newAppointment' => true,
+            'newAppointmentShop' => Shop::findOrFail(request('shop')),
         ]);
     })->name('appointments');
 });

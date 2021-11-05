@@ -4,6 +4,6 @@
 
 <script>
     export default {
-        name: 'Form'
+        name: 'Chat'
     }
 </script>
