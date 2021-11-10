@@ -5,8 +5,10 @@ namespace App\Models;
 use App\Models\Shop;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
+use App\StateMachines\AppointmentStateMachine;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Asantibanez\LaravelEloquentStateMachines\Traits\HasStateMachines;
+
 
 class Appointment extends Model
 {
@@ -24,6 +26,10 @@ class Appointment extends Model
         'duration',
         'duration_type',
         'state',
+        'subject',
+        'details',
+        'car',
+        'datetime',
     ];
 
     /**
@@ -32,7 +38,7 @@ class Appointment extends Model
      * @var array
      */
     public $stateMachines = [
-        'state' => StatusStateMachine::class
+        'state' => AppointmentStateMachine::class
     ];
 
     /**

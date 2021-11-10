@@ -15,7 +15,7 @@ class CreateAppointmentsTable extends Migration
     {
         Schema::create('appointments', function (Blueprint $table) {
             $table->id();
-            $table->dateTime('start');
+            $table->dateTime('start')->nullable();
             $table->dateTime('end')->nullable();
             $table->unsignedInteger('duration')->nullable();
             $table->string('duration_type')->nullable(); // Duration type can be: minutes, hours, days, weeks, months

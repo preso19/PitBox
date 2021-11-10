@@ -1,18 +1,20 @@
 <template>
     <app-layout>
-        <div class="grid grid-cols-2 gap-4" v-if="$page.props.userAppointments > 0 || $page.props.newAppointment">
-            <div class="p-4 mb-4 bg-white shadow-md rounded-3xl">
+        <div class="grid grid-cols-2 gap-4" v-if="$page.props.userAppointments.length > 0 || $page.props.newAppointment">
+            <div class="mb-4 overflow-hidden bg-white shadow-md rounded-3xl">
                 <appointments-list
                     :userAppointments="$page.props.userAppointments"
                     :newAppointment="$page.props.newAppointment"
                     :newAppointmentShop="$page.props.newAppointmentShop"
+                    :selected="selected"
+                    @updateSelectedAppointment="updateSelectedAppointment"
                 ></appointments-list>
             </div>
 
             <div class="p-4 mb-4 bg-white shadow-md rounded-3xl">
-                <appointments-form v-if="$page.props.newAppointment"></appointments-form>
+                <appointments-form v-if="$page.props.newAppointment" :newAppointmentShop="newAppointmentShop" :selected="selected"></appointments-form>
 
-                <appointment-chat v-else :selected="selected"></appointment-chat>
+                <appointments-chat v-else :selected="selected"></appointments-chat>
             </div>
         </div>
 
@@ -49,5 +51,17 @@
                 selected: null,
             }
         },
+
+        mounted() {
+            if (!this.selected) {
+                this.selected = this.userAppointments[0]
+            }
+        },
+
+        methods: {
+            updateSelectedAppointment(appointment) {
+                this.selected = appointment
+            }
+        }
     }
 </script>

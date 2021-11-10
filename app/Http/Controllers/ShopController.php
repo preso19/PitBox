@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Validator;
 
 class ShopController extends Controller
 {
-    public function create(Request $request, Shop $shop) {
+    public function create(Request $request) {
         $shop = Shop::create([
             'name' => 'Temporary Shop Name',
             'description' => 'Temporary Shop Description',

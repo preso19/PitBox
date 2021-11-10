@@ -1,10 +1,7 @@
 <?php
 
-use App\Models\Shop;
-use App\Models\User;
 use Inertia\Inertia;
-use App\Models\Appointment;
-use Illuminate\Support\Carbon;
+use App\Models\Shop;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -20,11 +17,17 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::middleware(['auth:sanctum', 'verified'])->group(function () {
+    /**
+     * Shop routes
+     */
     Route::post('/shop', 'ShopController@create')->name('create.shop');
-
     Route::put('/shop/{shop}', 'ShopController@update')->name('update.shop');
-
     Route::put('/shop/{shop}/location', 'ShopController@updateLocation')->name('update.shop.location');
+
+    /**
+     * Appoitment routes
+     */
+    Route::post('/appointment', 'AppoitmentController@create')->name('create.appointment');
 
     Route::get('/', function () {
         return Inertia::render('Home', [
@@ -49,9 +52,9 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
 
     Route::get('/appointments', function () {
         return Inertia::render('Appointments', [
-            'userAppointments' => Auth::user()->appointments,
-            'newAppointment' => true,
-            'newAppointmentShop' => Shop::findOrFail(request('shop')),
+            'userAppointments' => Auth::user()->appointments()->with(['shop'])->get(),
+            'newAppointment' => request('new') ? true : false,
+            'newAppointmentShop' => Shop::find(request('shop')),
         ]);
     })->name('appointments');
 });
