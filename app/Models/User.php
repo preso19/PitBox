@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Chat;
 use Laravel\Sanctum\HasApiTokens;
 use Laravel\Jetstream\HasProfilePhoto;
 use Spatie\Permission\Traits\HasRoles;
@@ -72,5 +73,19 @@ class User extends Authenticatable
      */
     public function appointments() {
         return $this->hasMany(Appointment::class);
+    }
+
+    /**
+     * Chats where user is sender
+     */
+    public function chatsSender() {
+        return $this->hasMany(Chat::class, 'sender_user_id');
+    }
+
+    /**
+     * Chats where user is recipient
+     */
+    public function chatsRecipient() {
+        return $this->hasMany(Chat::class, 'recipient_user_id');
     }
 }
