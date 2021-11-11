@@ -4,6 +4,10 @@
 
 <script>
     export default {
-        name: 'Chat'
+        name: 'Chat',
+
+        props: {
+            selected: Object
+        },
     }
 </script>
