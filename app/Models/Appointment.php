@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Chat;
 use App\Models\Shop;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
@@ -57,5 +58,14 @@ class Appointment extends Model
      */
     public function user() {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * The chat assigned to the appointment
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\hasOne
+     */
+    public function chat() {
+        return $this->hasOne(Chat::class);
     }
 }

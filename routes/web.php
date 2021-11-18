@@ -27,7 +27,7 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     /**
      * Appoitment routes
      */
-    Route::post('/appointment', 'AppoitmentController@create')->name('create.appointment');
+    Route::post('/appointment', 'AppointmentController@create')->name('create.appointment');
 
     Route::get('/', function () {
         return Inertia::render('Home', [
@@ -52,7 +52,7 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
 
     Route::get('/appointments', function () {
         return Inertia::render('Appointments', [
-            'userAppointments' => Auth::user()->appointments()->with(['shop'])->get(),
+            'userAppointments' => Auth::user()->appointments()->with(['shop', 'chat', 'chat.messages'])->get(),
             'newAppointment' => request('new') ? true : false,
             'newAppointmentShop' => Shop::find(request('shop')),
         ]);

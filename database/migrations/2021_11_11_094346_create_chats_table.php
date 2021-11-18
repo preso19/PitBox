@@ -15,11 +15,9 @@ class CreateChatsTable extends Migration
     {
         Schema::create('chats', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('sender_user_id');
-            $table->unsignedBigInteger('recipient_user_id');
+            $table->unsignedBigInteger('appointment_id');
 
-            $table->foreign('sender_user_id')->references('id')->on('users')->onDelete('cascade');
-            $table->foreign('recipient_user_id')->references('id')->on('users')->onDelete('cascade');
+            $table->foreign('appointment_id')->references('id')->on('appointments')->onDelete('cascade');
         });
     }
 
