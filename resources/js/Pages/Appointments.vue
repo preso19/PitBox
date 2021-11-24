@@ -14,7 +14,7 @@
             <div class="p-4 mb-4 bg-white shadow-md rounded-3xl">
                 <appointments-form v-if="$page.props.newAppointment" :newAppointmentShop="newAppointmentShop" :selected="selected"></appointments-form>
 
-                <appointments-chat v-else :selected="selected"></appointments-chat>
+                <appointments-chat v-if="!$page.props.newAppointment && selected" :selected="selected"></appointments-chat>
             </div>
         </div>
 

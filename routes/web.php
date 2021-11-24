@@ -29,6 +29,11 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
      */
     Route::post('/appointment', 'AppointmentController@create')->name('create.appointment');
 
+    /**
+     * Chat routes
+     */
+    Route::patch('/chat/{chat}/', 'ChatController@update')->name('chat.update');
+
     Route::get('/', function () {
         return Inertia::render('Home', [
             'canLogin' => Route::has('login'),

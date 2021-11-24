@@ -918,6 +918,3042 @@ module.exports = {
 
 /***/ }),
 
+/***/ "./node_modules/@themesberg/tailwind-datepicker/js/Datepicker.js":
+/*!***********************************************************************!*\
+  !*** ./node_modules/@themesberg/tailwind-datepicker/js/Datepicker.js ***!
+  \***********************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (/* binding */ Datepicker)
+/* harmony export */ });
+/* harmony import */ var _lib_utils_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./lib/utils.js */ "./node_modules/@themesberg/tailwind-datepicker/js/lib/utils.js");
+/* harmony import */ var _lib_date_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./lib/date.js */ "./node_modules/@themesberg/tailwind-datepicker/js/lib/date.js");
+/* harmony import */ var _lib_date_format_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./lib/date-format.js */ "./node_modules/@themesberg/tailwind-datepicker/js/lib/date-format.js");
+/* harmony import */ var _lib_event_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./lib/event.js */ "./node_modules/@themesberg/tailwind-datepicker/js/lib/event.js");
+/* harmony import */ var _i18n_base_locales_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./i18n/base-locales.js */ "./node_modules/@themesberg/tailwind-datepicker/js/i18n/base-locales.js");
+/* harmony import */ var _options_defaultOptions_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./options/defaultOptions.js */ "./node_modules/@themesberg/tailwind-datepicker/js/options/defaultOptions.js");
+/* harmony import */ var _options_processOptions_js__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./options/processOptions.js */ "./node_modules/@themesberg/tailwind-datepicker/js/options/processOptions.js");
+/* harmony import */ var _picker_Picker_js__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./picker/Picker.js */ "./node_modules/@themesberg/tailwind-datepicker/js/picker/Picker.js");
+/* harmony import */ var _events_functions_js__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./events/functions.js */ "./node_modules/@themesberg/tailwind-datepicker/js/events/functions.js");
+/* harmony import */ var _events_inputFieldListeners_js__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./events/inputFieldListeners.js */ "./node_modules/@themesberg/tailwind-datepicker/js/events/inputFieldListeners.js");
+/* harmony import */ var _events_otherListeners_js__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./events/otherListeners.js */ "./node_modules/@themesberg/tailwind-datepicker/js/events/otherListeners.js");
+
+
+
+
+
+
+
+
+
+
+
+
+function stringifyDates(dates, config) {
+  return dates
+    .map(dt => (0,_lib_date_format_js__WEBPACK_IMPORTED_MODULE_2__.formatDate)(dt, config.format, config.locale))
+    .join(config.dateDelimiter);
+}
+
+// parse input dates and create an array of time values for selection
+// returns undefined if there are no valid dates in inputDates
+// when origDates (current selection) is passed, the function works to mix
+// the input dates into the current selection
+function processInputDates(datepicker, inputDates, clear = false) {
+  const {config, dates: origDates, rangepicker} = datepicker;
+  if (inputDates.length === 0) {
+    // empty input is considered valid unless origiDates is passed
+    return clear ? [] : undefined;
+  }
+
+  const rangeEnd = rangepicker && datepicker === rangepicker.datepickers[1];
+  let newDates = inputDates.reduce((dates, dt) => {
+    let date = (0,_lib_date_format_js__WEBPACK_IMPORTED_MODULE_2__.parseDate)(dt, config.format, config.locale);
+    if (date === undefined) {
+      return dates;
+    }
+    if (config.pickLevel > 0) {
+      // adjust to 1st of the month/Jan 1st of the year
+      // or to the last day of the monh/Dec 31st of the year if the datepicker
+      // is the range-end picker of a rangepicker
+      const dt = new Date(date);
+      if (config.pickLevel === 1) {
+        date = rangeEnd
+          ? dt.setMonth(dt.getMonth() + 1, 0)
+          : dt.setDate(1);
+      } else {
+        date = rangeEnd
+          ? dt.setFullYear(dt.getFullYear() + 1, 0, 0)
+          : dt.setMonth(0, 1);
+      }
+    }
+    if (
+      (0,_lib_utils_js__WEBPACK_IMPORTED_MODULE_0__.isInRange)(date, config.minDate, config.maxDate)
+      && !dates.includes(date)
+      && !config.datesDisabled.includes(date)
+      && !config.daysOfWeekDisabled.includes(new Date(date).getDay())
+    ) {
+      dates.push(date);
+    }
+    return dates;
+  }, []);
+  if (newDates.length === 0) {
+    return;
+  }
+  if (config.multidate && !clear) {
+    // get the synmetric difference between origDates and newDates
+    newDates = newDates.reduce((dates, date) => {
+      if (!origDates.includes(date)) {
+        dates.push(date);
+      }
+      return dates;
+    }, origDates.filter(date => !newDates.includes(date)));
+  }
+  // do length check always because user can input multiple dates regardless of the mode
+  return config.maxNumberOfDates && newDates.length > config.maxNumberOfDates
+    ? newDates.slice(config.maxNumberOfDates * -1)
+    : newDates;
+}
+
+// refresh the UI elements
+// modes: 1: input only, 2, picker only, 3 both
+function refreshUI(datepicker, mode = 3, quickRender = true) {
+  const {config, picker, inputField} = datepicker;
+  if (mode & 2) {
+    const newView = picker.active ? config.pickLevel : config.startView;
+    picker.update().changeView(newView).render(quickRender);
+  }
+  if (mode & 1 && inputField) {
+    inputField.value = stringifyDates(datepicker.dates, config);
+  }
+}
+
+function setDate(datepicker, inputDates, options) {
+  let {clear, render, autohide} = options;
+  if (render === undefined) {
+    render = true;
+  }
+  if (!render) {
+    autohide = false;
+  } else if (autohide === undefined) {
+    autohide = datepicker.config.autohide;
+  }
+
+  const newDates = processInputDates(datepicker, inputDates, clear);
+  if (!newDates) {
+    return;
+  }
+  if (newDates.toString() !== datepicker.dates.toString()) {
+    datepicker.dates = newDates;
+    refreshUI(datepicker, render ? 3 : 1);
+    (0,_events_functions_js__WEBPACK_IMPORTED_MODULE_8__.triggerDatepickerEvent)(datepicker, 'changeDate');
+  } else {
+    refreshUI(datepicker, 1);
+  }
+  if (autohide) {
+    datepicker.hide();
+  }
+}
+
+/**
+ * Class representing a date picker
+ */
+class Datepicker {
+  /**
+   * Create a date picker
+   * @param  {Element} element - element to bind a date picker
+   * @param  {Object} [options] - config options
+   * @param  {DateRangePicker} [rangepicker] - DateRangePicker instance the
+   * date picker belongs to. Use this only when creating date picker as a part
+   * of date range picker
+   */
+  constructor(element, options = {}, rangepicker = undefined) {
+    element.datepicker = this;
+    this.element = element;
+
+    // set up config
+    const config = this.config = Object.assign({
+      buttonClass: (options.buttonClass && String(options.buttonClass)) || 'button',
+      container: document.body,
+      defaultViewDate: (0,_lib_date_js__WEBPACK_IMPORTED_MODULE_1__.today)(),
+      maxDate: undefined,
+      minDate: undefined,
+    }, (0,_options_processOptions_js__WEBPACK_IMPORTED_MODULE_6__["default"])(_options_defaultOptions_js__WEBPACK_IMPORTED_MODULE_5__["default"], this));
+    this._options = options;
+    Object.assign(config, (0,_options_processOptions_js__WEBPACK_IMPORTED_MODULE_6__["default"])(options, this));
+
+    // configure by type
+    const inline = this.inline = element.tagName !== 'INPUT';
+    let inputField;
+    let initialDates;
+
+    if (inline) {
+      config.container = element;
+      initialDates = (0,_lib_utils_js__WEBPACK_IMPORTED_MODULE_0__.stringToArray)(element.dataset.date, config.dateDelimiter);
+      delete element.dataset.date;
+    } else {
+      const container = options.container ? document.querySelector(options.container) : null;
+      if (container) {
+        config.container = container;
+      }
+      inputField = this.inputField = element;
+      inputField.classList.add('datepicker-input');
+      initialDates = (0,_lib_utils_js__WEBPACK_IMPORTED_MODULE_0__.stringToArray)(inputField.value, config.dateDelimiter);
+    }
+    if (rangepicker) {
+      // check validiry
+      const index = rangepicker.inputs.indexOf(inputField);
+      const datepickers = rangepicker.datepickers;
+      if (index < 0 || index > 1 || !Array.isArray(datepickers)) {
+        throw Error('Invalid rangepicker object.');
+      }
+      // attach itaelf to the rangepicker here so that processInputDates() can
+      // determine if this is the range-end picker of the rangepicker while
+      // setting inital values when pickLevel > 0
+      datepickers[index] = this;
+      // add getter for rangepicker
+      Object.defineProperty(this, 'rangepicker', {
+        get() {
+          return rangepicker;
+        },
+      });
+    }
+
+    // set initial dates
+    this.dates = [];
+    // process initial value
+    const inputDateValues = processInputDates(this, initialDates);
+    if (inputDateValues && inputDateValues.length > 0) {
+      this.dates = inputDateValues;
+    }
+    if (inputField) {
+      inputField.value = stringifyDates(this.dates, config);
+    }
+
+    const picker = this.picker = new _picker_Picker_js__WEBPACK_IMPORTED_MODULE_7__["default"](this);
+
+    if (inline) {
+      this.show();
+    } else {
+      // set up event listeners in other modes
+      const onMousedownDocument = _events_otherListeners_js__WEBPACK_IMPORTED_MODULE_10__.onClickOutside.bind(null, this);
+      const listeners = [
+        [inputField, 'keydown', _events_inputFieldListeners_js__WEBPACK_IMPORTED_MODULE_9__.onKeydown.bind(null, this)],
+        [inputField, 'focus', _events_inputFieldListeners_js__WEBPACK_IMPORTED_MODULE_9__.onFocus.bind(null, this)],
+        [inputField, 'mousedown', _events_inputFieldListeners_js__WEBPACK_IMPORTED_MODULE_9__.onMousedown.bind(null, this)],
+        [inputField, 'click', _events_inputFieldListeners_js__WEBPACK_IMPORTED_MODULE_9__.onClickInput.bind(null, this)],
+        [inputField, 'paste', _events_inputFieldListeners_js__WEBPACK_IMPORTED_MODULE_9__.onPaste.bind(null, this)],
+        [document, 'mousedown', onMousedownDocument],
+        [document, 'touchstart', onMousedownDocument],
+        [window, 'resize', picker.place.bind(picker)]
+      ];
+      (0,_lib_event_js__WEBPACK_IMPORTED_MODULE_3__.registerListeners)(this, listeners);
+    }
+  }
+
+  /**
+   * Format Date object or time value in given format and language
+   * @param  {Date|Number} date - date or time value to format
+   * @param  {String|Object} format - format string or object that contains
+   * toDisplay() custom formatter, whose signature is
+   * - args:
+   *   - date: {Date} - Date instance of the date passed to the method
+   *   - format: {Object} - the format object passed to the method
+   *   - locale: {Object} - locale for the language specified by `lang`
+   * - return:
+   *     {String} formatted date
+   * @param  {String} [lang=en] - language code for the locale to use
+   * @return {String} formatted date
+   */
+  static formatDate(date, format, lang) {
+    return (0,_lib_date_format_js__WEBPACK_IMPORTED_MODULE_2__.formatDate)(date, format, lang && _i18n_base_locales_js__WEBPACK_IMPORTED_MODULE_4__.locales[lang] || _i18n_base_locales_js__WEBPACK_IMPORTED_MODULE_4__.locales.en);
+  }
+
+  /**
+   * Parse date string
+   * @param  {String|Date|Number} dateStr - date string, Date object or time
+   * value to parse
+   * @param  {String|Object} format - format string or object that contains
+   * toValue() custom parser, whose signature is
+   * - args:
+   *   - dateStr: {String|Date|Number} - the dateStr passed to the method
+   *   - format: {Object} - the format object passed to the method
+   *   - locale: {Object} - locale for the language specified by `lang`
+   * - return:
+   *     {Date|Number} parsed date or its time value
+   * @param  {String} [lang=en] - language code for the locale to use
+   * @return {Number} time value of parsed date
+   */
+  static parseDate(dateStr, format, lang) {
+    return (0,_lib_date_format_js__WEBPACK_IMPORTED_MODULE_2__.parseDate)(dateStr, format, lang && _i18n_base_locales_js__WEBPACK_IMPORTED_MODULE_4__.locales[lang] || _i18n_base_locales_js__WEBPACK_IMPORTED_MODULE_4__.locales.en);
+  }
+
+  /**
+   * @type {Object} - Installed locales in `[languageCode]: localeObject` format
+   * en`:_English (US)_ is pre-installed.
+   */
+  static get locales() {
+    return _i18n_base_locales_js__WEBPACK_IMPORTED_MODULE_4__.locales;
+  }
+
+  /**
+   * @type {Boolean} - Whether the picker element is shown. `true` whne shown
+   */
+  get active() {
+    return !!(this.picker && this.picker.active);
+  }
+
+  /**
+   * @type {HTMLDivElement} - DOM object of picker element
+   */
+  get pickerElement() {
+    return this.picker ? this.picker.element : undefined;
+  }
+
+  /**
+   * Set new values to the config options
+   * @param {Object} options - config options to update
+   */
+  setOptions(options) {
+    const picker = this.picker;
+    const newOptions = (0,_options_processOptions_js__WEBPACK_IMPORTED_MODULE_6__["default"])(options, this);
+    Object.assign(this._options, options);
+    Object.assign(this.config, newOptions);
+    picker.setOptions(newOptions);
+
+    refreshUI(this, 3);
+  }
+
+  /**
+   * Show the picker element
+   */
+  show() {
+    if (this.inputField) {
+      if (this.inputField.disabled) {
+        return;
+      }
+      if (this.inputField !== document.activeElement) {
+        this._showing = true;
+        this.inputField.focus();
+        delete this._showing;
+      }
+    }
+    this.picker.show();
+  }
+
+  /**
+   * Hide the picker element
+   * Not available on inline picker
+   */
+  hide() {
+    if (this.inline) {
+      return;
+    }
+    this.picker.hide();
+    this.picker.update().changeView(this.config.startView).render();
+  }
+
+  /**
+   * Destroy the Datepicker instance
+   * @return {Detepicker} - the instance destroyed
+   */
+  destroy() {
+    this.hide();
+    (0,_lib_event_js__WEBPACK_IMPORTED_MODULE_3__.unregisterListeners)(this);
+    this.picker.detach();
+    if (!this.inline) {
+      this.inputField.classList.remove('datepicker-input');
+    }
+    delete this.element.datepicker;
+    return this;
+  }
+
+  /**
+   * Get the selected date(s)
+   *
+   * The method returns a Date object of selected date by default, and returns
+   * an array of selected dates in multidate mode. If format string is passed,
+   * it returns date string(s) formatted in given format.
+   *
+   * @param  {String} [format] - Format string to stringify the date(s)
+   * @return {Date|String|Date[]|String[]} - selected date(s), or if none is
+   * selected, empty array in multidate mode and untitled in sigledate mode
+   */
+  getDate(format = undefined) {
+    const callback = format
+      ? date => (0,_lib_date_format_js__WEBPACK_IMPORTED_MODULE_2__.formatDate)(date, format, this.config.locale)
+      : date => new Date(date);
+
+    if (this.config.multidate) {
+      return this.dates.map(callback);
+    }
+    if (this.dates.length > 0) {
+      return callback(this.dates[0]);
+    }
+  }
+
+  /**
+   * Set selected date(s)
+   *
+   * In multidate mode, you can pass multiple dates as a series of arguments
+   * or an array. (Since each date is parsed individually, the type of the
+   * dates doesn't have to be the same.)
+   * The given dates are used to toggle the select status of each date. The
+   * number of selected dates is kept from exceeding the length set to
+   * maxNumberOfDates.
+   *
+   * With clear: true option, the method can be used to clear the selection
+   * and to replace the selection instead of toggling in multidate mode.
+   * If the option is passed with no date arguments or an empty dates array,
+   * it works as "clear" (clear the selection then set nothing), and if the
+   * option is passed with new dates to select, it works as "replace" (clear
+   * the selection then set the given dates)
+   *
+   * When render: false option is used, the method omits re-rendering the
+   * picker element. In this case, you need to call refresh() method later in
+   * order for the picker element to reflect the changes. The input field is
+   * refreshed always regardless of this option.
+   *
+   * When invalid (unparsable, repeated, disabled or out-of-range) dates are
+   * passed, the method ignores them and applies only valid ones. In the case
+   * that all the given dates are invalid, which is distinguished from passing
+   * no dates, the method considers it as an error and leaves the selection
+   * untouched.
+   *
+   * @param {...(Date|Number|String)|Array} [dates] - Date strings, Date
+   * objects, time values or mix of those for new selection
+   * @param {Object} [options] - function options
+   * - clear: {boolean} - Whether to clear the existing selection
+   *     defualt: false
+   * - render: {boolean} - Whether to re-render the picker element
+   *     default: true
+   * - autohide: {boolean} - Whether to hide the picker element after re-render
+   *     Ignored when used with render: false
+   *     default: config.autohide
+   */
+  setDate(...args) {
+    const dates = [...args];
+    const opts = {};
+    const lastArg = (0,_lib_utils_js__WEBPACK_IMPORTED_MODULE_0__.lastItemOf)(args);
+    if (
+      typeof lastArg === 'object'
+      && !Array.isArray(lastArg)
+      && !(lastArg instanceof Date)
+      && lastArg
+    ) {
+      Object.assign(opts, dates.pop());
+    }
+
+    const inputDates = Array.isArray(dates[0]) ? dates[0] : dates;
+    setDate(this, inputDates, opts);
+  }
+
+  /**
+   * Update the selected date(s) with input field's value
+   * Not available on inline picker
+   *
+   * The input field will be refreshed with properly formatted date string.
+   *
+   * @param  {Object} [options] - function options
+   * - autohide: {boolean} - whether to hide the picker element after refresh
+   *     default: false
+   */
+  update(options = undefined) {
+    if (this.inline) {
+      return;
+    }
+
+    const opts = {clear: true, autohide: !!(options && options.autohide)};
+    const inputDates = (0,_lib_utils_js__WEBPACK_IMPORTED_MODULE_0__.stringToArray)(this.inputField.value, this.config.dateDelimiter);
+    setDate(this, inputDates, opts);
+  }
+
+  /**
+   * Refresh the picker element and the associated input field
+   * @param {String} [target] - target item when refreshing one item only
+   * 'picker' or 'input'
+   * @param {Boolean} [forceRender] - whether to re-render the picker element
+   * regardless of its state instead of optimized refresh
+   */
+  refresh(target = undefined, forceRender = false) {
+    if (target && typeof target !== 'string') {
+      forceRender = target;
+      target = undefined;
+    }
+
+    let mode;
+    if (target === 'picker') {
+      mode = 2;
+    } else if (target === 'input') {
+      mode = 1;
+    } else {
+      mode = 3;
+    }
+    refreshUI(this, mode, !forceRender);
+  }
+
+  /**
+   * Enter edit mode
+   * Not available on inline picker or when the picker element is hidden
+   */
+  enterEditMode() {
+    if (this.inline || !this.picker.active || this.editMode) {
+      return;
+    }
+    this.editMode = true;
+    this.inputField.classList.add('in-edit', 'border-blue-700');
+  }
+
+  /**
+   * Exit from edit mode
+   * Not available on inline picker
+   * @param  {Object} [options] - function options
+   * - update: {boolean} - whether to call update() after exiting
+   *     If false, input field is revert to the existing selection
+   *     default: false
+   */
+  exitEditMode(options = undefined) {
+    if (this.inline || !this.editMode) {
+      return;
+    }
+    const opts = Object.assign({update: false}, options);
+    delete this.editMode;
+    this.inputField.classList.remove('in-edit', 'border-blue-700');
+    if (opts.update) {
+      this.update(opts);
+    }
+  }
+}
+
+
+/***/ }),
+
+/***/ "./node_modules/@themesberg/tailwind-datepicker/js/events/functions.js":
+/*!*****************************************************************************!*\
+  !*** ./node_modules/@themesberg/tailwind-datepicker/js/events/functions.js ***!
+  \*****************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "triggerDatepickerEvent": () => (/* binding */ triggerDatepickerEvent),
+/* harmony export */   "goToPrevOrNext": () => (/* binding */ goToPrevOrNext),
+/* harmony export */   "switchView": () => (/* binding */ switchView),
+/* harmony export */   "unfocus": () => (/* binding */ unfocus)
+/* harmony export */ });
+/* harmony import */ var _lib_utils_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../lib/utils.js */ "./node_modules/@themesberg/tailwind-datepicker/js/lib/utils.js");
+/* harmony import */ var _lib_date_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../lib/date.js */ "./node_modules/@themesberg/tailwind-datepicker/js/lib/date.js");
+
+
+
+function triggerDatepickerEvent(datepicker, type) {
+  const detail = {
+    date: datepicker.getDate(),
+    viewDate: new Date(datepicker.picker.viewDate),
+    viewId: datepicker.picker.currentView.id,
+    datepicker,
+  };
+  datepicker.element.dispatchEvent(new CustomEvent(type, {detail}));
+}
+
+// direction: -1 (to previous), 1 (to next)
+function goToPrevOrNext(datepicker, direction) {
+  const {minDate, maxDate} = datepicker.config;
+  const {currentView, viewDate} = datepicker.picker;
+  let newViewDate;
+  switch (currentView.id) {
+    case 0:
+      newViewDate = (0,_lib_date_js__WEBPACK_IMPORTED_MODULE_1__.addMonths)(viewDate, direction);
+      break;
+    case 1:
+      newViewDate = (0,_lib_date_js__WEBPACK_IMPORTED_MODULE_1__.addYears)(viewDate, direction);
+      break;
+    default:
+      newViewDate = (0,_lib_date_js__WEBPACK_IMPORTED_MODULE_1__.addYears)(viewDate, direction * currentView.navStep);
+  }
+  newViewDate = (0,_lib_utils_js__WEBPACK_IMPORTED_MODULE_0__.limitToRange)(newViewDate, minDate, maxDate);
+  datepicker.picker.changeFocus(newViewDate).render();
+}
+
+function switchView(datepicker) {
+  const viewId = datepicker.picker.currentView.id;
+  if (viewId === datepicker.config.maxView) {
+    return;
+  }
+  datepicker.picker.changeView(viewId + 1).render();
+}
+
+function unfocus(datepicker) {
+  if (datepicker.config.updateOnBlur) {
+    datepicker.update({autohide: true});
+  } else {
+    datepicker.refresh('input');
+    datepicker.hide();
+  }
+}
+
+
+/***/ }),
+
+/***/ "./node_modules/@themesberg/tailwind-datepicker/js/events/inputFieldListeners.js":
+/*!***************************************************************************************!*\
+  !*** ./node_modules/@themesberg/tailwind-datepicker/js/events/inputFieldListeners.js ***!
+  \***************************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "onKeydown": () => (/* binding */ onKeydown),
+/* harmony export */   "onFocus": () => (/* binding */ onFocus),
+/* harmony export */   "onMousedown": () => (/* binding */ onMousedown),
+/* harmony export */   "onClickInput": () => (/* binding */ onClickInput),
+/* harmony export */   "onPaste": () => (/* binding */ onPaste)
+/* harmony export */ });
+/* harmony import */ var _lib_utils_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../lib/utils.js */ "./node_modules/@themesberg/tailwind-datepicker/js/lib/utils.js");
+/* harmony import */ var _lib_date_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../lib/date.js */ "./node_modules/@themesberg/tailwind-datepicker/js/lib/date.js");
+/* harmony import */ var _functions_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./functions.js */ "./node_modules/@themesberg/tailwind-datepicker/js/events/functions.js");
+
+
+
+
+// Find the closest date that doesn't meet the condition for unavailable date
+// Returns undefined if no available date is found
+// addFn: function to calculate the next date
+//   - args: time value, amount
+// increase: amount to pass to addFn
+// testFn: function to test the unavailablity of the date
+//   - args: time value; retun: true if unavailable
+function findNextAvailableOne(date, addFn, increase, testFn, min, max) {
+  if (!(0,_lib_utils_js__WEBPACK_IMPORTED_MODULE_0__.isInRange)(date, min, max)) {
+    return;
+  }
+  if (testFn(date)) {
+    const newDate = addFn(date, increase);
+    return findNextAvailableOne(newDate, addFn, increase, testFn, min, max);
+  }
+  return date;
+}
+
+// direction: -1 (left/up), 1 (right/down)
+// vertical: true for up/down, false for left/right
+function moveByArrowKey(datepicker, ev, direction, vertical) {
+  const picker = datepicker.picker;
+  const currentView = picker.currentView;
+  const step = currentView.step || 1;
+  let viewDate = picker.viewDate;
+  let addFn;
+  let testFn;
+  switch (currentView.id) {
+    case 0:
+      if (vertical) {
+        viewDate = (0,_lib_date_js__WEBPACK_IMPORTED_MODULE_1__.addDays)(viewDate, direction * 7);
+      } else if (ev.ctrlKey || ev.metaKey) {
+        viewDate = (0,_lib_date_js__WEBPACK_IMPORTED_MODULE_1__.addYears)(viewDate, direction);
+      } else {
+        viewDate = (0,_lib_date_js__WEBPACK_IMPORTED_MODULE_1__.addDays)(viewDate, direction);
+      }
+      addFn = _lib_date_js__WEBPACK_IMPORTED_MODULE_1__.addDays;
+      testFn = (date) => currentView.disabled.includes(date);
+      break;
+    case 1:
+      viewDate = (0,_lib_date_js__WEBPACK_IMPORTED_MODULE_1__.addMonths)(viewDate, vertical ? direction * 4 : direction);
+      addFn = _lib_date_js__WEBPACK_IMPORTED_MODULE_1__.addMonths;
+      testFn = (date) => {
+        const dt = new Date(date);
+        const {year, disabled} = currentView;
+        return dt.getFullYear() === year && disabled.includes(dt.getMonth());
+      };
+      break;
+    default:
+      viewDate = (0,_lib_date_js__WEBPACK_IMPORTED_MODULE_1__.addYears)(viewDate, direction * (vertical ? 4 : 1) * step);
+      addFn = _lib_date_js__WEBPACK_IMPORTED_MODULE_1__.addYears;
+      testFn = date => currentView.disabled.includes((0,_lib_date_js__WEBPACK_IMPORTED_MODULE_1__.startOfYearPeriod)(date, step));
+  }
+  viewDate = findNextAvailableOne(
+    viewDate,
+    addFn,
+    direction < 0 ? -step : step,
+    testFn,
+    currentView.minDate,
+    currentView.maxDate
+  );
+  if (viewDate !== undefined) {
+    picker.changeFocus(viewDate).render();
+  }
+}
+
+function onKeydown(datepicker, ev) {
+  if (ev.key === 'Tab') {
+    (0,_functions_js__WEBPACK_IMPORTED_MODULE_2__.unfocus)(datepicker);
+    return;
+  }
+
+  const picker = datepicker.picker;
+  const {id, isMinView} = picker.currentView;
+  if (!picker.active) {
+    switch (ev.key) {
+      case 'ArrowDown':
+      case 'Escape':
+        picker.show();
+        break;
+      case 'Enter':
+        datepicker.update();
+        break;
+      default:
+        return;
+    }
+  } else if (datepicker.editMode) {
+    switch (ev.key) {
+      case 'Escape':
+        picker.hide();
+        break;
+      case 'Enter':
+        datepicker.exitEditMode({update: true, autohide: datepicker.config.autohide});
+        break;
+      default:
+        return;
+    }
+  } else {
+    switch (ev.key) {
+      case 'Escape':
+        picker.hide();
+        break;
+      case 'ArrowLeft':
+        if (ev.ctrlKey || ev.metaKey) {
+          (0,_functions_js__WEBPACK_IMPORTED_MODULE_2__.goToPrevOrNext)(datepicker, -1);
+        } else if (ev.shiftKey) {
+          datepicker.enterEditMode();
+          return;
+        } else {
+          moveByArrowKey(datepicker, ev, -1, false);
+        }
+        break;
+      case 'ArrowRight':
+        if (ev.ctrlKey || ev.metaKey) {
+          (0,_functions_js__WEBPACK_IMPORTED_MODULE_2__.goToPrevOrNext)(datepicker, 1);
+        } else if (ev.shiftKey) {
+          datepicker.enterEditMode();
+          return;
+        } else {
+          moveByArrowKey(datepicker, ev, 1, false);
+        }
+        break;
+      case 'ArrowUp':
+        if (ev.ctrlKey || ev.metaKey) {
+          (0,_functions_js__WEBPACK_IMPORTED_MODULE_2__.switchView)(datepicker);
+        } else if (ev.shiftKey) {
+          datepicker.enterEditMode();
+          return;
+        } else {
+          moveByArrowKey(datepicker, ev, -1, true);
+        }
+        break;
+      case 'ArrowDown':
+        if (ev.shiftKey && !ev.ctrlKey && !ev.metaKey) {
+          datepicker.enterEditMode();
+          return;
+        }
+        moveByArrowKey(datepicker, ev, 1, true);
+        break;
+      case 'Enter':
+        if (isMinView) {
+          datepicker.setDate(picker.viewDate);
+        } else {
+          picker.changeView(id - 1).render();
+        }
+        break;
+      case 'Backspace':
+      case 'Delete':
+        datepicker.enterEditMode();
+        return;
+      default:
+        if (ev.key.length === 1 && !ev.ctrlKey && !ev.metaKey) {
+          datepicker.enterEditMode();
+        }
+        return;
+    }
+  }
+  ev.preventDefault();
+  ev.stopPropagation();
+}
+
+function onFocus(datepicker) {
+  if (datepicker.config.showOnFocus && !datepicker._showing) {
+    datepicker.show();
+  }
+}
+
+// for the prevention for entering edit mode while getting focus on click
+function onMousedown(datepicker, ev) {
+  const el = ev.target;
+  if (datepicker.picker.active || datepicker.config.showOnClick) {
+    el._active = el === document.activeElement;
+    el._clicking = setTimeout(() => {
+      delete el._active;
+      delete el._clicking;
+    }, 2000);
+  }
+}
+
+function onClickInput(datepicker, ev) {
+  const el = ev.target;
+  if (!el._clicking) {
+    return;
+  }
+  clearTimeout(el._clicking);
+  delete el._clicking;
+
+  if (el._active) {
+    datepicker.enterEditMode();
+  }
+  delete el._active;
+
+  if (datepicker.config.showOnClick) {
+    datepicker.show();
+  }
+}
+
+function onPaste(datepicker, ev) {
+  if (ev.clipboardData.types.includes('text/plain')) {
+    datepicker.enterEditMode();
+  }
+}
+
+
+/***/ }),
+
+/***/ "./node_modules/@themesberg/tailwind-datepicker/js/events/otherListeners.js":
+/*!**********************************************************************************!*\
+  !*** ./node_modules/@themesberg/tailwind-datepicker/js/events/otherListeners.js ***!
+  \**********************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "onClickOutside": () => (/* binding */ onClickOutside)
+/* harmony export */ });
+/* harmony import */ var _lib_event_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../lib/event.js */ "./node_modules/@themesberg/tailwind-datepicker/js/lib/event.js");
+/* harmony import */ var _functions_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./functions.js */ "./node_modules/@themesberg/tailwind-datepicker/js/events/functions.js");
+
+
+
+// for the `document` to delegate the events from outside the picker/input field
+function onClickOutside(datepicker, ev) {
+  const element = datepicker.element;
+  if (element !== document.activeElement) {
+    return;
+  }
+  const pickerElem = datepicker.picker.element;
+  if ((0,_lib_event_js__WEBPACK_IMPORTED_MODULE_0__.findElementInEventPath)(ev, el => el === element || el === pickerElem)) {
+    return;
+  }
+  (0,_functions_js__WEBPACK_IMPORTED_MODULE_1__.unfocus)(datepicker);
+}
+
+
+/***/ }),
+
+/***/ "./node_modules/@themesberg/tailwind-datepicker/js/events/pickerListeners.js":
+/*!***********************************************************************************!*\
+  !*** ./node_modules/@themesberg/tailwind-datepicker/js/events/pickerListeners.js ***!
+  \***********************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "onClickTodayBtn": () => (/* binding */ onClickTodayBtn),
+/* harmony export */   "onClickClearBtn": () => (/* binding */ onClickClearBtn),
+/* harmony export */   "onClickViewSwitch": () => (/* binding */ onClickViewSwitch),
+/* harmony export */   "onClickPrevBtn": () => (/* binding */ onClickPrevBtn),
+/* harmony export */   "onClickNextBtn": () => (/* binding */ onClickNextBtn),
+/* harmony export */   "onClickView": () => (/* binding */ onClickView),
+/* harmony export */   "onClickPicker": () => (/* binding */ onClickPicker)
+/* harmony export */ });
+/* harmony import */ var _lib_date_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../lib/date.js */ "./node_modules/@themesberg/tailwind-datepicker/js/lib/date.js");
+/* harmony import */ var _lib_event_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../lib/event.js */ "./node_modules/@themesberg/tailwind-datepicker/js/lib/event.js");
+/* harmony import */ var _functions_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./functions.js */ "./node_modules/@themesberg/tailwind-datepicker/js/events/functions.js");
+
+
+
+
+function goToSelectedMonthOrYear(datepicker, selection) {
+  const picker = datepicker.picker;
+  const viewDate = new Date(picker.viewDate);
+  const viewId = picker.currentView.id;
+  const newDate = viewId === 1
+    ? (0,_lib_date_js__WEBPACK_IMPORTED_MODULE_0__.addMonths)(viewDate, selection - viewDate.getMonth())
+    : (0,_lib_date_js__WEBPACK_IMPORTED_MODULE_0__.addYears)(viewDate, selection - viewDate.getFullYear());
+
+  picker.changeFocus(newDate).changeView(viewId - 1).render();
+}
+
+function onClickTodayBtn(datepicker) {
+  const picker = datepicker.picker;
+  const currentDate = (0,_lib_date_js__WEBPACK_IMPORTED_MODULE_0__.today)();
+  if (datepicker.config.todayBtnMode === 1) {
+    if (datepicker.config.autohide) {
+      datepicker.setDate(currentDate);
+      return;
+    }
+    datepicker.setDate(currentDate, {render: false});
+    picker.update();
+  }
+  if (picker.viewDate !== currentDate) {
+    picker.changeFocus(currentDate);
+  }
+  picker.changeView(0).render();
+}
+
+function onClickClearBtn(datepicker) {
+  datepicker.setDate({clear: true});
+}
+
+function onClickViewSwitch(datepicker) {
+  (0,_functions_js__WEBPACK_IMPORTED_MODULE_2__.switchView)(datepicker);
+}
+
+function onClickPrevBtn(datepicker) {
+  (0,_functions_js__WEBPACK_IMPORTED_MODULE_2__.goToPrevOrNext)(datepicker, -1);
+}
+
+function onClickNextBtn(datepicker) {
+  (0,_functions_js__WEBPACK_IMPORTED_MODULE_2__.goToPrevOrNext)(datepicker, 1);
+}
+
+// For the picker's main block to delegete the events from `datepicker-cell`s
+function onClickView(datepicker, ev) {
+  const target = (0,_lib_event_js__WEBPACK_IMPORTED_MODULE_1__.findElementInEventPath)(ev, '.datepicker-cell');
+  if (!target || target.classList.contains('disabled')) {
+    return;
+  }
+
+  const {id, isMinView} = datepicker.picker.currentView;
+  if (isMinView) {
+    datepicker.setDate(Number(target.dataset.date));
+  } else if (id === 1) {
+    goToSelectedMonthOrYear(datepicker, Number(target.dataset.month));
+  } else {
+    goToSelectedMonthOrYear(datepicker, Number(target.dataset.year));
+  }
+}
+
+function onClickPicker(datepicker) {
+  if (!datepicker.inline && !datepicker.config.disableTouchKeyboard) {
+    datepicker.inputField.focus();
+  }
+}
+
+
+/***/ }),
+
+/***/ "./node_modules/@themesberg/tailwind-datepicker/js/i18n/base-locales.js":
+/*!******************************************************************************!*\
+  !*** ./node_modules/@themesberg/tailwind-datepicker/js/i18n/base-locales.js ***!
+  \******************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "locales": () => (/* binding */ locales)
+/* harmony export */ });
+// default locales
+const locales = {
+  en: {
+    days: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+    daysShort: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+    daysMin: ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"],
+    months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
+    monthsShort: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+    today: "Today",
+    clear: "Clear",
+    titleFormat: "MM y"
+  }
+};
+
+
+/***/ }),
+
+/***/ "./node_modules/@themesberg/tailwind-datepicker/js/lib/date-format.js":
+/*!****************************************************************************!*\
+  !*** ./node_modules/@themesberg/tailwind-datepicker/js/lib/date-format.js ***!
+  \****************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "reFormatTokens": () => (/* binding */ reFormatTokens),
+/* harmony export */   "reNonDateParts": () => (/* binding */ reNonDateParts),
+/* harmony export */   "parseDate": () => (/* binding */ parseDate),
+/* harmony export */   "formatDate": () => (/* binding */ formatDate)
+/* harmony export */ });
+/* harmony import */ var _date_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./date.js */ "./node_modules/@themesberg/tailwind-datepicker/js/lib/date.js");
+/* harmony import */ var _utils_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./utils.js */ "./node_modules/@themesberg/tailwind-datepicker/js/lib/utils.js");
+
+
+
+// pattern for format parts
+const reFormatTokens = /dd?|DD?|mm?|MM?|yy?(?:yy)?/;
+// pattern for non date parts
+const reNonDateParts = /[\s!-/:-@[-`{-~年月日]+/;
+// cache for persed formats
+let knownFormats = {};
+// parse funtions for date parts
+const parseFns = {
+  y(date, year) {
+    return new Date(date).setFullYear(parseInt(year, 10));
+  },
+  m(date, month, locale) {
+    const newDate = new Date(date);
+    let monthIndex = parseInt(month, 10) - 1;
+
+    if (isNaN(monthIndex)) {
+      if (!month) {
+        return NaN;
+      }
+
+      const monthName = month.toLowerCase();
+      const compareNames = name => name.toLowerCase().startsWith(monthName);
+      // compare with both short and full names because some locales have periods
+      // in the short names (not equal to the first X letters of the full names)
+      monthIndex = locale.monthsShort.findIndex(compareNames);
+      if (monthIndex < 0) {
+        monthIndex = locale.months.findIndex(compareNames);
+      }
+      if (monthIndex < 0) {
+        return NaN;
+      }
+    }
+
+    newDate.setMonth(monthIndex);
+    return newDate.getMonth() !== normalizeMonth(monthIndex)
+      ? newDate.setDate(0)
+      : newDate.getTime();
+  },
+  d(date, day) {
+    return new Date(date).setDate(parseInt(day, 10));
+  },
+};
+// format functions for date parts
+const formatFns = {
+  d(date) {
+    return date.getDate();
+  },
+  dd(date) {
+    return padZero(date.getDate(), 2);
+  },
+  D(date, locale) {
+    return locale.daysShort[date.getDay()];
+  },
+  DD(date, locale) {
+    return locale.days[date.getDay()];
+  },
+  m(date) {
+    return date.getMonth() + 1;
+  },
+  mm(date) {
+    return padZero(date.getMonth() + 1, 2);
+  },
+  M(date, locale) {
+    return locale.monthsShort[date.getMonth()];
+  },
+  MM(date, locale) {
+    return locale.months[date.getMonth()];
+  },
+  y(date) {
+    return date.getFullYear();
+  },
+  yy(date) {
+    return padZero(date.getFullYear(), 2).slice(-2);
+  },
+  yyyy(date) {
+    return padZero(date.getFullYear(), 4);
+  },
+};
+
+// get month index in normal range (0 - 11) from any number
+function normalizeMonth(monthIndex) {
+  return monthIndex > -1 ? monthIndex % 12 : normalizeMonth(monthIndex + 12);
+}
+
+function padZero(num, length) {
+  return num.toString().padStart(length, '0');
+}
+
+function parseFormatString(format) {
+  if (typeof format !== 'string') {
+    throw new Error("Invalid date format.");
+  }
+  if (format in knownFormats) {
+    return knownFormats[format];
+  }
+
+  // sprit the format string into parts and seprators
+  const separators = format.split(reFormatTokens);
+  const parts = format.match(new RegExp(reFormatTokens, 'g'));
+  if (separators.length === 0 || !parts) {
+    throw new Error("Invalid date format.");
+  }
+
+  // collect format functions used in the format
+  const partFormatters = parts.map(token => formatFns[token]);
+
+  // collect parse function keys used in the format
+  // iterate over parseFns' keys in order to keep the order of the keys.
+  const partParserKeys = Object.keys(parseFns).reduce((keys, key) => {
+    const token = parts.find(part => part[0] !== 'D' && part[0].toLowerCase() === key);
+    if (token) {
+      keys.push(key);
+    }
+    return keys;
+  }, []);
+
+  return knownFormats[format] = {
+    parser(dateStr, locale) {
+      const dateParts = dateStr.split(reNonDateParts).reduce((dtParts, part, index) => {
+        if (part.length > 0 && parts[index]) {
+          const token = parts[index][0];
+          if (token === 'M') {
+            dtParts.m = part;
+          } else if (token !== 'D') {
+            dtParts[token] = part;
+          }
+        }
+        return dtParts;
+      }, {});
+
+      // iterate over partParserkeys so that the parsing is made in the oder
+      // of year, month and day to prevent the day parser from correcting last
+      // day of month wrongly
+      return partParserKeys.reduce((origDate, key) => {
+        const newDate = parseFns[key](origDate, dateParts[key], locale);
+        // ingnore the part failed to parse
+        return isNaN(newDate) ? origDate : newDate;
+      }, (0,_date_js__WEBPACK_IMPORTED_MODULE_0__.today)());
+    },
+    formatter(date, locale) {
+      let dateStr = partFormatters.reduce((str, fn, index) => {
+        return str += `${separators[index]}${fn(date, locale)}`;
+      }, '');
+      // separators' length is always parts' length + 1,
+      return dateStr += (0,_utils_js__WEBPACK_IMPORTED_MODULE_1__.lastItemOf)(separators);
+    },
+  };
+}
+
+function parseDate(dateStr, format, locale) {
+  if (dateStr instanceof Date || typeof dateStr === 'number') {
+    const date = (0,_date_js__WEBPACK_IMPORTED_MODULE_0__.stripTime)(dateStr);
+    return isNaN(date) ? undefined : date;
+  }
+  if (!dateStr) {
+    return undefined;
+  }
+  if (dateStr === 'today') {
+    return (0,_date_js__WEBPACK_IMPORTED_MODULE_0__.today)();
+  }
+
+  if (format && format.toValue) {
+    const date = format.toValue(dateStr, format, locale);
+    return isNaN(date) ? undefined : (0,_date_js__WEBPACK_IMPORTED_MODULE_0__.stripTime)(date);
+  }
+
+  return parseFormatString(format).parser(dateStr, locale);
+}
+
+function formatDate(date, format, locale) {
+  if (isNaN(date) || (!date && date !== 0)) {
+    return '';
+  }
+
+  const dateObj = typeof date === 'number' ? new Date(date) : date;
+
+  if (format.toDisplay) {
+    return format.toDisplay(dateObj, format, locale);
+  }
+
+  return parseFormatString(format).formatter(dateObj, locale);
+}
+
+
+/***/ }),
+
+/***/ "./node_modules/@themesberg/tailwind-datepicker/js/lib/date.js":
+/*!*********************************************************************!*\
+  !*** ./node_modules/@themesberg/tailwind-datepicker/js/lib/date.js ***!
+  \*********************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "stripTime": () => (/* binding */ stripTime),
+/* harmony export */   "today": () => (/* binding */ today),
+/* harmony export */   "dateValue": () => (/* binding */ dateValue),
+/* harmony export */   "addDays": () => (/* binding */ addDays),
+/* harmony export */   "addWeeks": () => (/* binding */ addWeeks),
+/* harmony export */   "addMonths": () => (/* binding */ addMonths),
+/* harmony export */   "addYears": () => (/* binding */ addYears),
+/* harmony export */   "dayOfTheWeekOf": () => (/* binding */ dayOfTheWeekOf),
+/* harmony export */   "getWeek": () => (/* binding */ getWeek),
+/* harmony export */   "startOfYearPeriod": () => (/* binding */ startOfYearPeriod)
+/* harmony export */ });
+function stripTime(timeValue) {
+  return new Date(timeValue).setHours(0, 0, 0, 0);
+}
+
+function today() {
+  return new Date().setHours(0, 0, 0, 0);
+}
+
+// Get the time value of the start of given date or year, month and day
+function dateValue(...args) {
+  switch (args.length) {
+    case 0:
+      return today();
+    case 1:
+      return stripTime(args[0]);
+  }
+
+  // use setFullYear() to keep 2-digit year from being mapped to 1900-1999
+  const newDate = new Date(0);
+  newDate.setFullYear(...args);
+  return newDate.setHours(0, 0, 0, 0);
+}
+
+function addDays(date, amount) {
+  const newDate = new Date(date);
+  return newDate.setDate(newDate.getDate() + amount);
+}
+
+function addWeeks(date, amount) {
+  return addDays(date, amount * 7);
+}
+
+function addMonths(date, amount) {
+  // If the day of the date is not in the new month, the last day of the new
+  // month will be returned. e.g. Jan 31 + 1 month → Feb 28 (not Mar 03)
+  const newDate = new Date(date);
+  const monthsToSet = newDate.getMonth() + amount;
+  let expectedMonth = monthsToSet % 12;
+  if (expectedMonth < 0) {
+    expectedMonth += 12;
+  }
+
+  const time = newDate.setMonth(monthsToSet);
+  return newDate.getMonth() !== expectedMonth ? newDate.setDate(0) : time;
+}
+
+function addYears(date, amount) {
+  // If the date is Feb 29 and the new year is not a leap year, Feb 28 of the
+  // new year will be returned.
+  const newDate = new Date(date);
+  const expectedMonth = newDate.getMonth();
+  const time = newDate.setFullYear(newDate.getFullYear() + amount);
+  return expectedMonth === 1 && newDate.getMonth() === 2 ? newDate.setDate(0) : time;
+}
+
+// Calculate the distance bettwen 2 days of the week
+function dayDiff(day, from) {
+  return (day - from + 7) % 7;
+}
+
+// Get the date of the specified day of the week of given base date
+function dayOfTheWeekOf(baseDate, dayOfWeek, weekStart = 0) {
+  const baseDay = new Date(baseDate).getDay();
+  return addDays(baseDate, dayDiff(dayOfWeek, weekStart) - dayDiff(baseDay, weekStart));
+}
+
+// Get the ISO week of a date
+function getWeek(date) {
+  // start of ISO week is Monday
+  const thuOfTheWeek = dayOfTheWeekOf(date, 4, 1);
+  // 1st week == the week where the 4th of January is in
+  const firstThu = dayOfTheWeekOf(new Date(thuOfTheWeek).setMonth(0, 4), 4, 1);
+  return Math.round((thuOfTheWeek - firstThu) / 604800000) + 1;
+}
+
+// Get the start year of the period of years that includes given date
+// years: length of the year period
+function startOfYearPeriod(date, years) {
+  /* @see https://en.wikipedia.org/wiki/Year_zero#ISO_8601 */
+  const year = new Date(date).getFullYear();
+  return Math.floor(year / years) * years;
+}
+
+
+/***/ }),
+
+/***/ "./node_modules/@themesberg/tailwind-datepicker/js/lib/dom.js":
+/*!********************************************************************!*\
+  !*** ./node_modules/@themesberg/tailwind-datepicker/js/lib/dom.js ***!
+  \********************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "parseHTML": () => (/* binding */ parseHTML),
+/* harmony export */   "isVisible": () => (/* binding */ isVisible),
+/* harmony export */   "hideElement": () => (/* binding */ hideElement),
+/* harmony export */   "showElement": () => (/* binding */ showElement),
+/* harmony export */   "emptyChildNodes": () => (/* binding */ emptyChildNodes),
+/* harmony export */   "replaceChildNodes": () => (/* binding */ replaceChildNodes)
+/* harmony export */ });
+const range = document.createRange();
+
+function parseHTML(html) {
+  return range.createContextualFragment(html);
+}
+
+// equivalent to jQuery's :visble
+function isVisible(el) {
+  return !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
+}
+
+function hideElement(el) {
+  if (el.style.display === 'none') {
+    return;
+  }
+  // back up the existing display setting in data-style-display
+  if (el.style.display) {
+    el.dataset.styleDisplay = el.style.display;
+  }
+  el.style.display = 'none';
+}
+
+function showElement(el) {
+  if (el.style.display !== 'none') {
+    return;
+  }
+  if (el.dataset.styleDisplay) {
+    // restore backed-up dispay property
+    el.style.display = el.dataset.styleDisplay;
+    delete el.dataset.styleDisplay;
+  } else {
+    el.style.display = '';
+  }
+}
+
+function emptyChildNodes(el) {
+  if (el.firstChild) {
+    el.removeChild(el.firstChild);
+    emptyChildNodes(el);
+  }
+}
+
+function replaceChildNodes(el, newChildNodes) {
+  emptyChildNodes(el);
+  if (newChildNodes instanceof DocumentFragment) {
+    el.appendChild(newChildNodes);
+  } else if (typeof newChildNodes === 'string') {
+    el.appendChild(parseHTML(newChildNodes));
+  } else if (typeof newChildNodes.forEach === 'function') {
+    newChildNodes.forEach((node) => {
+      el.appendChild(node);
+    });
+  }
+}
+
+
+/***/ }),
+
+/***/ "./node_modules/@themesberg/tailwind-datepicker/js/lib/event.js":
+/*!**********************************************************************!*\
+  !*** ./node_modules/@themesberg/tailwind-datepicker/js/lib/event.js ***!
+  \**********************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "registerListeners": () => (/* binding */ registerListeners),
+/* harmony export */   "unregisterListeners": () => (/* binding */ unregisterListeners),
+/* harmony export */   "findElementInEventPath": () => (/* binding */ findElementInEventPath)
+/* harmony export */ });
+const listenerRegistry = new WeakMap();
+const {addEventListener, removeEventListener} = EventTarget.prototype;
+
+// Register event listeners to a key object
+// listeners: array of listener definitions;
+//   - each definition must be a flat array of event target and the arguments
+//     used to call addEventListener() on the target
+function registerListeners(keyObj, listeners) {
+  let registered = listenerRegistry.get(keyObj);
+  if (!registered) {
+    registered = [];
+    listenerRegistry.set(keyObj, registered);
+  }
+  listeners.forEach((listener) => {
+    addEventListener.call(...listener);
+    registered.push(listener);
+  });
+}
+
+function unregisterListeners(keyObj) {
+  let listeners = listenerRegistry.get(keyObj);
+  if (!listeners) {
+    return;
+  }
+  listeners.forEach((listener) => {
+    removeEventListener.call(...listener);
+  });
+  listenerRegistry.delete(keyObj);
+}
+
+// Event.composedPath() polyfill for Edge
+// based on https://gist.github.com/kleinfreund/e9787d73776c0e3750dcfcdc89f100ec
+if (!Event.prototype.composedPath) {
+  const getComposedPath = (node, path = []) => {
+    path.push(node);
+
+    let parent;
+    if (node.parentNode) {
+      parent = node.parentNode;
+    } else if (node.host) { // ShadowRoot
+      parent = node.host;
+    } else if (node.defaultView) {  // Document
+      parent = node.defaultView;
+    }
+    return parent ? getComposedPath(parent, path) : path;
+  };
+
+  Event.prototype.composedPath = function () {
+    return getComposedPath(this.target);
+  };
+}
+
+function findFromPath(path, criteria, currentTarget, index = 0) {
+  const el = path[index];
+  if (criteria(el)) {
+    return el;
+  } else if (el === currentTarget || !el.parentElement) {
+    // stop when reaching currentTarget or <html>
+    return;
+  }
+  return findFromPath(path, criteria, currentTarget, index + 1);
+}
+
+// Search for the actual target of a delegated event
+function findElementInEventPath(ev, selector) {
+  const criteria = typeof selector === 'function' ? selector : el => el.matches(selector);
+  return findFromPath(ev.composedPath(), criteria, ev.currentTarget);
+}
+
+
+/***/ }),
+
+/***/ "./node_modules/@themesberg/tailwind-datepicker/js/lib/utils.js":
+/*!**********************************************************************!*\
+  !*** ./node_modules/@themesberg/tailwind-datepicker/js/lib/utils.js ***!
+  \**********************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "hasProperty": () => (/* binding */ hasProperty),
+/* harmony export */   "lastItemOf": () => (/* binding */ lastItemOf),
+/* harmony export */   "pushUnique": () => (/* binding */ pushUnique),
+/* harmony export */   "stringToArray": () => (/* binding */ stringToArray),
+/* harmony export */   "isInRange": () => (/* binding */ isInRange),
+/* harmony export */   "limitToRange": () => (/* binding */ limitToRange),
+/* harmony export */   "createTagRepeat": () => (/* binding */ createTagRepeat),
+/* harmony export */   "optimizeTemplateHTML": () => (/* binding */ optimizeTemplateHTML)
+/* harmony export */ });
+function hasProperty(obj, prop) {
+  return Object.prototype.hasOwnProperty.call(obj, prop);
+}
+
+function lastItemOf(arr) {
+  return arr[arr.length - 1];
+}
+
+// push only the items not included in the array
+function pushUnique(arr, ...items) {
+  items.forEach((item) => {
+    if (arr.includes(item)) {
+      return;
+    }
+    arr.push(item);
+  });
+  return arr;
+}
+
+function stringToArray(str, separator) {
+  // convert empty string to an empty array
+  return str ? str.split(separator) : [];
+}
+
+function isInRange(testVal, min, max) {
+  const minOK = min === undefined || testVal >= min;
+  const maxOK = max === undefined || testVal <= max;
+  return minOK && maxOK;
+}
+
+function limitToRange(val, min, max) {
+  if (val < min) {
+    return min;
+  }
+  if (val > max) {
+    return max;
+  }
+  return val;
+}
+
+function createTagRepeat(tagName, repeat, attributes = {}, index = 0, html = '') {
+  const openTagSrc = Object.keys(attributes).reduce((src, attr) => {
+    let val = attributes[attr];
+    if (typeof val === 'function') {
+      val = val(index);
+    }
+    return `${src} ${attr}="${val}"`;
+  }, tagName);
+  html += `<${openTagSrc}></${tagName}>`;
+
+  const next = index + 1;
+  return next < repeat
+    ? createTagRepeat(tagName, repeat, attributes, next, html)
+    : html;
+}
+
+// Remove the spacing surrounding tags for HTML parser not to create text nodes
+// before/after elements
+function optimizeTemplateHTML(html) {
+  return html.replace(/>\s+/g, '>').replace(/\s+</, '<');
+}
+
+
+/***/ }),
+
+/***/ "./node_modules/@themesberg/tailwind-datepicker/js/options/defaultOptions.js":
+/*!***********************************************************************************!*\
+  !*** ./node_modules/@themesberg/tailwind-datepicker/js/options/defaultOptions.js ***!
+  \***********************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+// config options updatable by setOptions() and their default values
+const defaultOptions = {
+  autohide: false,
+  beforeShowDay: null,
+  beforeShowDecade: null,
+  beforeShowMonth: null,
+  beforeShowYear: null,
+  calendarWeeks: false,
+  clearBtn: false,
+  dateDelimiter: ',',
+  datesDisabled: [],
+  daysOfWeekDisabled: [],
+  daysOfWeekHighlighted: [],
+  defaultViewDate: undefined, // placeholder, defaults to today() by the program
+  disableTouchKeyboard: false,
+  format: 'mm/dd/yyyy',
+  language: 'en',
+  maxDate: null,
+  maxNumberOfDates: 1,
+  maxView: 3,
+  minDate: null,
+  nextArrow: '<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>',
+  orientation: 'auto',
+  pickLevel: 0,
+  prevArrow: '<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd"></path></svg>',
+  showDaysOfWeek: true,
+  showOnClick: true,
+  showOnFocus: true,
+  startView: 0,
+  title: '',
+  todayBtn: false,
+  todayBtnMode: 0,
+  todayHighlight: false,
+  updateOnBlur: true,
+  weekStart: 0,
+};
+
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (defaultOptions);
+
+
+/***/ }),
+
+/***/ "./node_modules/@themesberg/tailwind-datepicker/js/options/processOptions.js":
+/*!***********************************************************************************!*\
+  !*** ./node_modules/@themesberg/tailwind-datepicker/js/options/processOptions.js ***!
+  \***********************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (/* binding */ processOptions)
+/* harmony export */ });
+/* harmony import */ var _lib_utils_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../lib/utils.js */ "./node_modules/@themesberg/tailwind-datepicker/js/lib/utils.js");
+/* harmony import */ var _lib_date_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../lib/date.js */ "./node_modules/@themesberg/tailwind-datepicker/js/lib/date.js");
+/* harmony import */ var _lib_date_format_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../lib/date-format.js */ "./node_modules/@themesberg/tailwind-datepicker/js/lib/date-format.js");
+/* harmony import */ var _lib_dom_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../lib/dom.js */ "./node_modules/@themesberg/tailwind-datepicker/js/lib/dom.js");
+/* harmony import */ var _defaultOptions_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./defaultOptions.js */ "./node_modules/@themesberg/tailwind-datepicker/js/options/defaultOptions.js");
+
+
+
+
+
+
+const {
+  language: defaultLang,
+  format: defaultFormat,
+  weekStart: defaultWeekStart,
+} = _defaultOptions_js__WEBPACK_IMPORTED_MODULE_4__["default"];
+
+// Reducer function to filter out invalid day-of-week from the input
+function sanitizeDOW(dow, day) {
+  return dow.length < 6 && day >= 0 && day < 7
+    ? (0,_lib_utils_js__WEBPACK_IMPORTED_MODULE_0__.pushUnique)(dow, day)
+    : dow;
+}
+
+function calcEndOfWeek(startOfWeek) {
+  return (startOfWeek + 6) % 7;
+}
+
+// validate input date. if invalid, fallback to the original value
+function validateDate(value, format, locale, origValue) {
+  const date = (0,_lib_date_format_js__WEBPACK_IMPORTED_MODULE_2__.parseDate)(value, format, locale);
+  return date !== undefined ? date : origValue;
+}
+
+// Validate viewId. if invalid, fallback to the original value
+function validateViewId(value, origValue, max = 3) {
+  const viewId = parseInt(value, 10);
+  return viewId >= 0 && viewId <= max ? viewId : origValue;
+}
+
+// Create Datepicker configuration to set
+function processOptions(options, datepicker) {
+  const inOpts = Object.assign({}, options);
+  const config = {};
+  const locales = datepicker.constructor.locales;
+  let {
+    format,
+    language,
+    locale,
+    maxDate,
+    maxView,
+    minDate,
+    pickLevel,
+    startView,
+    weekStart,
+  } = datepicker.config || {};
+
+  if (inOpts.language) {
+    let lang;
+    if (inOpts.language !== language) {
+      if (locales[inOpts.language]) {
+        lang = inOpts.language;
+      } else {
+        // Check if langauge + region tag can fallback to the one without
+        // region (e.g. fr-CA → fr)
+        lang = inOpts.language.split('-')[0];
+        if (locales[lang] === undefined) {
+          lang = false;
+        }
+      }
+    }
+    delete inOpts.language;
+    if (lang) {
+      language = config.language = lang;
+
+      // update locale as well when updating language
+      const origLocale = locale || locales[defaultLang];
+      // use default language's properties for the fallback
+      locale = Object.assign({
+        format: defaultFormat,
+        weekStart: defaultWeekStart
+      }, locales[defaultLang]);
+      if (language !== defaultLang) {
+        Object.assign(locale, locales[language]);
+      }
+      config.locale = locale;
+      // if format and/or weekStart are the same as old locale's defaults,
+      // update them to new locale's defaults
+      if (format === origLocale.format) {
+        format = config.format = locale.format;
+      }
+      if (weekStart === origLocale.weekStart) {
+        weekStart = config.weekStart = locale.weekStart;
+        config.weekEnd = calcEndOfWeek(locale.weekStart);
+      }
+    }
+  }
+
+  if (inOpts.format) {
+    const hasToDisplay = typeof inOpts.format.toDisplay === 'function';
+    const hasToValue = typeof inOpts.format.toValue === 'function';
+    const validFormatString = _lib_date_format_js__WEBPACK_IMPORTED_MODULE_2__.reFormatTokens.test(inOpts.format);
+    if ((hasToDisplay && hasToValue) || validFormatString) {
+      format = config.format = inOpts.format;
+    }
+    delete inOpts.format;
+  }
+
+  //*** dates ***//
+  // while min and maxDate for "no limit" in the options are better to be null
+  // (especially when updating), the ones in the config have to be undefined
+  // because null is treated as 0 (= unix epoch) when comparing with time value
+  let minDt = minDate;
+  let maxDt = maxDate;
+  if (inOpts.minDate !== undefined) {
+    minDt = inOpts.minDate === null
+      ? (0,_lib_date_js__WEBPACK_IMPORTED_MODULE_1__.dateValue)(0, 0, 1)  // set 0000-01-01 to prevent negative values for year
+      : validateDate(inOpts.minDate, format, locale, minDt);
+    delete inOpts.minDate;
+  }
+  if (inOpts.maxDate !== undefined) {
+    maxDt = inOpts.maxDate === null
+      ? undefined
+      : validateDate(inOpts.maxDate, format, locale, maxDt);
+    delete inOpts.maxDate;
+  }
+  if (maxDt < minDt) {
+    minDate = config.minDate = maxDt;
+    maxDate = config.maxDate = minDt;
+  } else {
+    if (minDate !== minDt) {
+      minDate = config.minDate = minDt;
+    }
+    if (maxDate !== maxDt) {
+      maxDate = config.maxDate = maxDt;
+    }
+  }
+
+  if (inOpts.datesDisabled) {
+    config.datesDisabled = inOpts.datesDisabled.reduce((dates, dt) => {
+      const date = (0,_lib_date_format_js__WEBPACK_IMPORTED_MODULE_2__.parseDate)(dt, format, locale);
+      return date !== undefined ? (0,_lib_utils_js__WEBPACK_IMPORTED_MODULE_0__.pushUnique)(dates, date) : dates;
+    }, []);
+    delete inOpts.datesDisabled;
+  }
+  if (inOpts.defaultViewDate !== undefined) {
+    const viewDate = (0,_lib_date_format_js__WEBPACK_IMPORTED_MODULE_2__.parseDate)(inOpts.defaultViewDate, format, locale);
+    if (viewDate !== undefined) {
+      config.defaultViewDate = viewDate;
+    }
+    delete inOpts.defaultViewDate;
+  }
+
+  //*** days of week ***//
+  if (inOpts.weekStart !== undefined) {
+    const wkStart = Number(inOpts.weekStart) % 7;
+    if (!isNaN(wkStart)) {
+      weekStart = config.weekStart = wkStart;
+      config.weekEnd = calcEndOfWeek(wkStart);
+    }
+    delete inOpts.weekStart;
+  }
+  if (inOpts.daysOfWeekDisabled) {
+    config.daysOfWeekDisabled = inOpts.daysOfWeekDisabled.reduce(sanitizeDOW, []);
+    delete inOpts.daysOfWeekDisabled;
+  }
+  if (inOpts.daysOfWeekHighlighted) {
+    config.daysOfWeekHighlighted = inOpts.daysOfWeekHighlighted.reduce(sanitizeDOW, []);
+    delete inOpts.daysOfWeekHighlighted;
+  }
+
+  //*** multi date ***//
+  if (inOpts.maxNumberOfDates !== undefined) {
+    const maxNumberOfDates = parseInt(inOpts.maxNumberOfDates, 10);
+    if (maxNumberOfDates >= 0) {
+      config.maxNumberOfDates = maxNumberOfDates;
+      config.multidate = maxNumberOfDates !== 1;
+    }
+    delete inOpts.maxNumberOfDates;
+  }
+  if (inOpts.dateDelimiter) {
+    config.dateDelimiter = String(inOpts.dateDelimiter);
+    delete inOpts.dateDelimiter;
+  }
+
+  //*** pick level & view ***//
+  let newPickLevel = pickLevel;
+  if (inOpts.pickLevel !== undefined) {
+    newPickLevel = validateViewId(inOpts.pickLevel, 2);
+    delete inOpts.pickLevel;
+  }
+  if (newPickLevel !== pickLevel) {
+    pickLevel = config.pickLevel = newPickLevel;
+  }
+
+  let newMaxView = maxView;
+  if (inOpts.maxView !== undefined) {
+    newMaxView = validateViewId(inOpts.maxView, maxView);
+    delete inOpts.maxView;
+  }
+  // ensure max view >= pick level
+  newMaxView = pickLevel > newMaxView ? pickLevel : newMaxView;
+  if (newMaxView !== maxView) {
+    maxView = config.maxView = newMaxView;
+  }
+
+  let newStartView = startView;
+  if (inOpts.startView !== undefined) {
+    newStartView = validateViewId(inOpts.startView, newStartView);
+    delete inOpts.startView;
+  }
+  // ensure pick level <= start view <= max view
+  if (newStartView < pickLevel) {
+    newStartView = pickLevel;
+  } else if (newStartView > maxView) {
+    newStartView = maxView;
+  }
+  if (newStartView !== startView) {
+    config.startView = newStartView;
+  }
+
+  //*** template ***//
+  if (inOpts.prevArrow) {
+    const prevArrow = (0,_lib_dom_js__WEBPACK_IMPORTED_MODULE_3__.parseHTML)(inOpts.prevArrow);
+    if (prevArrow.childNodes.length > 0) {
+      config.prevArrow = prevArrow.childNodes;
+    }
+    delete inOpts.prevArrow;
+  }
+  if (inOpts.nextArrow) {
+    const nextArrow = (0,_lib_dom_js__WEBPACK_IMPORTED_MODULE_3__.parseHTML)(inOpts.nextArrow);
+    if (nextArrow.childNodes.length > 0) {
+      config.nextArrow = nextArrow.childNodes;
+    }
+    delete inOpts.nextArrow;
+  }
+
+  //*** misc ***//
+  if (inOpts.disableTouchKeyboard !== undefined) {
+    config.disableTouchKeyboard = 'ontouchstart' in document && !!inOpts.disableTouchKeyboard;
+    delete inOpts.disableTouchKeyboard;
+  }
+  if (inOpts.orientation) {
+    const orientation = inOpts.orientation.toLowerCase().split(/\s+/g);
+    config.orientation = {
+      x: orientation.find(x => (x === 'left' || x === 'right')) || 'auto',
+      y: orientation.find(y => (y === 'top' || y === 'bottom')) || 'auto',
+    };
+    delete inOpts.orientation;
+  }
+  if (inOpts.todayBtnMode !== undefined) {
+    switch(inOpts.todayBtnMode) {
+      case 0:
+      case 1:
+        config.todayBtnMode = inOpts.todayBtnMode;
+    }
+    delete inOpts.todayBtnMode;
+  }
+
+  //*** copy the rest ***//
+  Object.keys(inOpts).forEach((key) => {
+    if (inOpts[key] !== undefined && (0,_lib_utils_js__WEBPACK_IMPORTED_MODULE_0__.hasProperty)(_defaultOptions_js__WEBPACK_IMPORTED_MODULE_4__["default"], key)) {
+      config[key] = inOpts[key];
+    }
+  });
+
+  return config;
+}
+
+
+/***/ }),
+
+/***/ "./node_modules/@themesberg/tailwind-datepicker/js/picker/Picker.js":
+/*!**************************************************************************!*\
+  !*** ./node_modules/@themesberg/tailwind-datepicker/js/picker/Picker.js ***!
+  \**************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (/* binding */ Picker)
+/* harmony export */ });
+/* harmony import */ var _lib_utils_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../lib/utils.js */ "./node_modules/@themesberg/tailwind-datepicker/js/lib/utils.js");
+/* harmony import */ var _lib_date_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../lib/date.js */ "./node_modules/@themesberg/tailwind-datepicker/js/lib/date.js");
+/* harmony import */ var _lib_dom_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../lib/dom.js */ "./node_modules/@themesberg/tailwind-datepicker/js/lib/dom.js");
+/* harmony import */ var _lib_event_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../lib/event.js */ "./node_modules/@themesberg/tailwind-datepicker/js/lib/event.js");
+/* harmony import */ var _templates_pickerTemplate_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./templates/pickerTemplate.js */ "./node_modules/@themesberg/tailwind-datepicker/js/picker/templates/pickerTemplate.js");
+/* harmony import */ var _views_DaysView_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./views/DaysView.js */ "./node_modules/@themesberg/tailwind-datepicker/js/picker/views/DaysView.js");
+/* harmony import */ var _views_MonthsView_js__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./views/MonthsView.js */ "./node_modules/@themesberg/tailwind-datepicker/js/picker/views/MonthsView.js");
+/* harmony import */ var _views_YearsView_js__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./views/YearsView.js */ "./node_modules/@themesberg/tailwind-datepicker/js/picker/views/YearsView.js");
+/* harmony import */ var _events_functions_js__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../events/functions.js */ "./node_modules/@themesberg/tailwind-datepicker/js/events/functions.js");
+/* harmony import */ var _events_pickerListeners_js__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../events/pickerListeners.js */ "./node_modules/@themesberg/tailwind-datepicker/js/events/pickerListeners.js");
+
+
+
+
+
+
+
+
+
+
+
+function processPickerOptions(picker, options) {
+  if (options.title !== undefined) {
+    if (options.title) {
+      picker.controls.title.textContent = options.title;
+      (0,_lib_dom_js__WEBPACK_IMPORTED_MODULE_2__.showElement)(picker.controls.title);
+    } else {
+      picker.controls.title.textContent = '';
+      (0,_lib_dom_js__WEBPACK_IMPORTED_MODULE_2__.hideElement)(picker.controls.title);
+    }
+  }
+  if (options.prevArrow) {
+    const prevBtn = picker.controls.prevBtn;
+    (0,_lib_dom_js__WEBPACK_IMPORTED_MODULE_2__.emptyChildNodes)(prevBtn);
+    options.prevArrow.forEach((node) => {
+      prevBtn.appendChild(node.cloneNode(true));
+    });
+  }
+  if (options.nextArrow) {
+    const nextBtn = picker.controls.nextBtn;
+    (0,_lib_dom_js__WEBPACK_IMPORTED_MODULE_2__.emptyChildNodes)(nextBtn);
+    options.nextArrow.forEach((node) => {
+      nextBtn.appendChild(node.cloneNode(true));
+    });
+  }
+  if (options.locale) {
+    picker.controls.todayBtn.textContent = options.locale.today;
+    picker.controls.clearBtn.textContent = options.locale.clear;
+  }
+  if (options.todayBtn !== undefined) {
+    if (options.todayBtn) {
+      (0,_lib_dom_js__WEBPACK_IMPORTED_MODULE_2__.showElement)(picker.controls.todayBtn);
+    } else {
+      (0,_lib_dom_js__WEBPACK_IMPORTED_MODULE_2__.hideElement)(picker.controls.todayBtn);
+    }
+  }
+  if ((0,_lib_utils_js__WEBPACK_IMPORTED_MODULE_0__.hasProperty)(options, 'minDate') || (0,_lib_utils_js__WEBPACK_IMPORTED_MODULE_0__.hasProperty)(options, 'maxDate')) {
+    const {minDate, maxDate} = picker.datepicker.config;
+    picker.controls.todayBtn.disabled = !(0,_lib_utils_js__WEBPACK_IMPORTED_MODULE_0__.isInRange)((0,_lib_date_js__WEBPACK_IMPORTED_MODULE_1__.today)(), minDate, maxDate);
+  }
+  if (options.clearBtn !== undefined) {
+    if (options.clearBtn) {
+      (0,_lib_dom_js__WEBPACK_IMPORTED_MODULE_2__.showElement)(picker.controls.clearBtn);
+    } else {
+      (0,_lib_dom_js__WEBPACK_IMPORTED_MODULE_2__.hideElement)(picker.controls.clearBtn);
+    }
+  }
+}
+
+// Compute view date to reset, which will be...
+// - the last item of the selected dates or defaultViewDate if no selection
+// - limitted to minDate or maxDate if it exceeds the range
+function computeResetViewDate(datepicker) {
+  const {dates, config} = datepicker;
+  const viewDate = dates.length > 0 ? (0,_lib_utils_js__WEBPACK_IMPORTED_MODULE_0__.lastItemOf)(dates) : config.defaultViewDate;
+  return (0,_lib_utils_js__WEBPACK_IMPORTED_MODULE_0__.limitToRange)(viewDate, config.minDate, config.maxDate);
+}
+
+// Change current view's view date
+function setViewDate(picker, newDate) {
+  const oldViewDate = new Date(picker.viewDate);
+  const newViewDate = new Date(newDate);
+  const {id, year, first, last} = picker.currentView;
+  const viewYear = newViewDate.getFullYear();
+
+  picker.viewDate = newDate;
+  if (viewYear !== oldViewDate.getFullYear()) {
+    (0,_events_functions_js__WEBPACK_IMPORTED_MODULE_8__.triggerDatepickerEvent)(picker.datepicker, 'changeYear');
+  }
+  if (newViewDate.getMonth() !== oldViewDate.getMonth()) {
+    (0,_events_functions_js__WEBPACK_IMPORTED_MODULE_8__.triggerDatepickerEvent)(picker.datepicker, 'changeMonth');
+  }
+
+  // return whether the new date is in different period on time from the one
+  // displayed in the current view
+  // when true, the view needs to be re-rendered on the next UI refresh.
+  switch (id) {
+    case 0:
+      return newDate < first || newDate > last;
+    case 1:
+      return viewYear !== year;
+    default:
+      return viewYear < first || viewYear > last;
+  }
+}
+
+function getTextDirection(el) {
+  return window.getComputedStyle(el).direction;
+}
+
+// Class representing the picker UI
+class Picker {
+  constructor(datepicker) {
+    this.datepicker = datepicker;
+
+    const template = _templates_pickerTemplate_js__WEBPACK_IMPORTED_MODULE_4__["default"].replace(/%buttonClass%/g, datepicker.config.buttonClass);
+    const element = this.element = (0,_lib_dom_js__WEBPACK_IMPORTED_MODULE_2__.parseHTML)(template).firstChild;
+    const [header, main, footer] = element.firstChild.children;
+    const title = header.firstElementChild;
+    const [prevBtn, viewSwitch, nextBtn] = header.lastElementChild.children;
+    const [todayBtn, clearBtn] = footer.firstChild.children;
+    const controls = {
+      title,
+      prevBtn,
+      viewSwitch,
+      nextBtn,
+      todayBtn,
+      clearBtn,
+    };
+    this.main = main;
+    this.controls = controls;
+
+    const elementClass = datepicker.inline ? 'inline' : 'dropdown';
+    element.classList.add(`datepicker-${elementClass}`);
+    elementClass === 'dropdown' ? element.classList.add('dropdown', 'absolute', 'top-0', 'left-0', 'z-20', 'pt-2') : null;
+
+    processPickerOptions(this, datepicker.config);
+    this.viewDate = computeResetViewDate(datepicker);
+
+    // set up event listeners
+    (0,_lib_event_js__WEBPACK_IMPORTED_MODULE_3__.registerListeners)(datepicker, [
+      [element, 'click', _events_pickerListeners_js__WEBPACK_IMPORTED_MODULE_9__.onClickPicker.bind(null, datepicker), {capture: true}],
+      [main, 'click', _events_pickerListeners_js__WEBPACK_IMPORTED_MODULE_9__.onClickView.bind(null, datepicker)],
+      [controls.viewSwitch, 'click', _events_pickerListeners_js__WEBPACK_IMPORTED_MODULE_9__.onClickViewSwitch.bind(null, datepicker)],
+      [controls.prevBtn, 'click', _events_pickerListeners_js__WEBPACK_IMPORTED_MODULE_9__.onClickPrevBtn.bind(null, datepicker)],
+      [controls.nextBtn, 'click', _events_pickerListeners_js__WEBPACK_IMPORTED_MODULE_9__.onClickNextBtn.bind(null, datepicker)],
+      [controls.todayBtn, 'click', _events_pickerListeners_js__WEBPACK_IMPORTED_MODULE_9__.onClickTodayBtn.bind(null, datepicker)],
+      [controls.clearBtn, 'click', _events_pickerListeners_js__WEBPACK_IMPORTED_MODULE_9__.onClickClearBtn.bind(null, datepicker)],
+    ]);
+
+    // set up views
+    this.views = [
+      new _views_DaysView_js__WEBPACK_IMPORTED_MODULE_5__["default"](this),
+      new _views_MonthsView_js__WEBPACK_IMPORTED_MODULE_6__["default"](this),
+      new _views_YearsView_js__WEBPACK_IMPORTED_MODULE_7__["default"](this, {id: 2, name: 'years', cellClass: 'year', step: 1}),
+      new _views_YearsView_js__WEBPACK_IMPORTED_MODULE_7__["default"](this, {id: 3, name: 'decades', cellClass: 'decade', step: 10}),
+    ];
+    this.currentView = this.views[datepicker.config.startView];
+
+    this.currentView.render();
+    this.main.appendChild(this.currentView.element);
+    datepicker.config.container.appendChild(this.element);
+  }
+
+  setOptions(options) {
+    processPickerOptions(this, options);
+    this.views.forEach((view) => {
+      view.init(options, false);
+    });
+    this.currentView.render();
+  }
+
+  detach() {
+    this.datepicker.config.container.removeChild(this.element);
+  }
+
+  show() {
+    if (this.active) {
+      return;
+    }
+    this.element.classList.add('active', 'block');
+    this.element.classList.remove('hidden');
+    this.active = true;
+
+    const datepicker = this.datepicker;
+    if (!datepicker.inline) {
+      // ensure picker's direction matches input's
+      const inputDirection = getTextDirection(datepicker.inputField);
+      if (inputDirection !== getTextDirection(datepicker.config.container)) {
+        this.element.dir = inputDirection;
+      } else if (this.element.dir) {
+        this.element.removeAttribute('dir');
+      }
+
+      this.place();
+      if (datepicker.config.disableTouchKeyboard) {
+        datepicker.inputField.blur();
+      }
+    }
+    (0,_events_functions_js__WEBPACK_IMPORTED_MODULE_8__.triggerDatepickerEvent)(datepicker, 'show');
+  }
+
+  hide() {
+    if (!this.active) {
+      return;
+    }
+    this.datepicker.exitEditMode();
+    this.element.classList.remove('active', 'block');
+    this.element.classList.add('active', 'block', 'hidden');
+    this.active = false;
+    (0,_events_functions_js__WEBPACK_IMPORTED_MODULE_8__.triggerDatepickerEvent)(this.datepicker, 'hide');
+  }
+
+  place() {
+    const {classList, style} = this.element;
+    const {config, inputField} = this.datepicker;
+    const container = config.container;
+    const {
+      width: calendarWidth,
+      height: calendarHeight,
+    } = this.element.getBoundingClientRect();
+    const {
+      left: containerLeft,
+      top: containerTop,
+      width: containerWidth,
+    } = container.getBoundingClientRect();
+    const {
+      left: inputLeft,
+      top: inputTop,
+      width: inputWidth,
+      height: inputHeight
+    } = inputField.getBoundingClientRect();
+    let {x: orientX, y: orientY} = config.orientation;
+    let scrollTop;
+    let left;
+    let top;
+
+    if (container === document.body) {
+      scrollTop = window.scrollY;
+      left = inputLeft + window.scrollX;
+      top = inputTop + scrollTop;
+    } else {
+      scrollTop = container.scrollTop;
+      left = inputLeft - containerLeft;
+      top = inputTop - containerTop + scrollTop;
+    }
+
+    if (orientX === 'auto') {
+      if (left < 0) {
+        // align to the left and move into visible area if input's left edge < window's
+        orientX = 'left';
+        left = 10;
+      } else if (left + calendarWidth > containerWidth) {
+        // align to the right if canlendar's right edge > container's
+        orientX = 'right';
+      } else {
+        orientX = getTextDirection(inputField) === 'rtl' ? 'right' : 'left';
+      }
+    }
+    if (orientX === 'right') {
+      left -= calendarWidth - inputWidth;
+    }
+
+    if (orientY === 'auto') {
+      orientY = top - calendarHeight < scrollTop ? 'bottom' : 'top';
+    }
+    if (orientY === 'top') {
+      top -= calendarHeight;
+    } else {
+      top += inputHeight;
+    }
+
+    classList.remove(
+      'datepicker-orient-top',
+      'datepicker-orient-bottom',
+      'datepicker-orient-right',
+      'datepicker-orient-left'
+    );
+    classList.add(`datepicker-orient-${orientY}`, `datepicker-orient-${orientX}`);
+
+    style.top = top ? `${top}px` : top;
+    style.left = left ? `${left}px` : left;
+  }
+
+  setViewSwitchLabel(labelText) {
+    this.controls.viewSwitch.textContent = labelText;
+  }
+
+  setPrevBtnDisabled(disabled) {
+    this.controls.prevBtn.disabled = disabled;
+  }
+
+  setNextBtnDisabled(disabled) {
+    this.controls.nextBtn.disabled = disabled;
+  }
+
+  changeView(viewId) {
+    const oldView = this.currentView;
+    const newView =  this.views[viewId];
+    if (newView.id !== oldView.id) {
+      this.currentView = newView;
+      this._renderMethod = 'render';
+      (0,_events_functions_js__WEBPACK_IMPORTED_MODULE_8__.triggerDatepickerEvent)(this.datepicker, 'changeView');
+      this.main.replaceChild(newView.element, oldView.element);
+    }
+    return this;
+  }
+
+  // Change the focused date (view date)
+  changeFocus(newViewDate) {
+    this._renderMethod = setViewDate(this, newViewDate) ? 'render' : 'refreshFocus';
+    this.views.forEach((view) => {
+      view.updateFocus();
+    });
+    return this;
+  }
+
+  // Apply the change of the selected dates
+  update() {
+    const newViewDate = computeResetViewDate(this.datepicker);
+    this._renderMethod = setViewDate(this, newViewDate) ? 'render' : 'refresh';
+    this.views.forEach((view) => {
+      view.updateFocus();
+      view.updateSelection();
+    });
+    return this;
+  }
+
+  // Refresh the picker UI
+  render(quickRender = true) {
+    const renderMethod = (quickRender && this._renderMethod) || 'render';
+    delete this._renderMethod;
+
+    this.currentView[renderMethod]();
+  }
+}
+
+
+/***/ }),
+
+/***/ "./node_modules/@themesberg/tailwind-datepicker/js/picker/templates/calendarWeeksTemplate.js":
+/*!***************************************************************************************************!*\
+  !*** ./node_modules/@themesberg/tailwind-datepicker/js/picker/templates/calendarWeeksTemplate.js ***!
+  \***************************************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _lib_utils_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../lib/utils.js */ "./node_modules/@themesberg/tailwind-datepicker/js/lib/utils.js");
+
+
+const calendarWeeksTemplate = (0,_lib_utils_js__WEBPACK_IMPORTED_MODULE_0__.optimizeTemplateHTML)(`<div class="calendar-weeks">
+  <div class="days-of-week flex"><span class="dow h-6 leading-6 text-sm font-medium text-gray-500"></span></div>
+  <div class="weeks">${(0,_lib_utils_js__WEBPACK_IMPORTED_MODULE_0__.createTagRepeat)('span', 6, {class: 'week block flex-1 leading-9 border-0 rounded-lg cursor-default text-center text-gray-900 font-semibold text-sm'})}</div>
+</div>`);
+
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (calendarWeeksTemplate);
+
+
+/***/ }),
+
+/***/ "./node_modules/@themesberg/tailwind-datepicker/js/picker/templates/daysTemplate.js":
+/*!******************************************************************************************!*\
+  !*** ./node_modules/@themesberg/tailwind-datepicker/js/picker/templates/daysTemplate.js ***!
+  \******************************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _lib_utils_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../lib/utils.js */ "./node_modules/@themesberg/tailwind-datepicker/js/lib/utils.js");
+
+
+const daysTemplate = (0,_lib_utils_js__WEBPACK_IMPORTED_MODULE_0__.optimizeTemplateHTML)(`<div class="days">
+  <div class="days-of-week grid grid-cols-7 mb-1">${(0,_lib_utils_js__WEBPACK_IMPORTED_MODULE_0__.createTagRepeat)('span', 7, {class: 'dow block flex-1 leading-9 border-0 rounded-lg cursor-default text-center text-gray-900 font-semibold text-sm'})}</div>
+  <div class="datepicker-grid w-64 grid grid-cols-7">${(0,_lib_utils_js__WEBPACK_IMPORTED_MODULE_0__.createTagRepeat)('span', 42 , {class: 'block flex-1 leading-9 border-0 rounded-lg cursor-default text-center text-gray-900 font-semibold text-sm h-6 leading-6 text-sm font-medium text-gray-500'})}</div>
+</div>`);
+
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (daysTemplate);
+
+
+/***/ }),
+
+/***/ "./node_modules/@themesberg/tailwind-datepicker/js/picker/templates/pickerTemplate.js":
+/*!********************************************************************************************!*\
+  !*** ./node_modules/@themesberg/tailwind-datepicker/js/picker/templates/pickerTemplate.js ***!
+  \********************************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _lib_utils_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../lib/utils.js */ "./node_modules/@themesberg/tailwind-datepicker/js/lib/utils.js");
+
+
+const pickerTemplate = (0,_lib_utils_js__WEBPACK_IMPORTED_MODULE_0__.optimizeTemplateHTML)(`<div class="datepicker hidden">
+  <div class="datepicker-picker inline-block rounded-lg bg-white shadow-lg p-4">
+    <div class="datepicker-header">
+      <div class="datepicker-title bg-white px-2 py-3 text-center font-semibold"></div>
+      <div class="datepicker-controls flex justify-between mb-2">
+        <button type="button" class="bg-white rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-900 text-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-gray-200 prev-btn"></button>
+        <button type="button" class="text-sm rounded-lg text-gray-900 bg-white font-semibold py-2.5 px-5 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200 view-switch"></button>
+        <button type="button" class="bg-white rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-900 text-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-gray-200 next-btn"></button>
+      </div>
+    </div>
+    <div class="datepicker-main p-1"></div>
+    <div class="datepicker-footer">
+      <div class="datepicker-controls flex space-x-2 mt-2">
+        <button type="button" class="%buttonClass% today-btn text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2 text-center w-1/2"></button>
+        <button type="button" class="%buttonClass% clear-btn text-gray-900 bg-white border border-gray-300 hover:bg-gray-100 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2 text-center w-1/2"></button>
+      </div>
+    </div>
+  </div>
+</div>`);
+
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (pickerTemplate);
+
+
+/***/ }),
+
+/***/ "./node_modules/@themesberg/tailwind-datepicker/js/picker/views/DaysView.js":
+/*!**********************************************************************************!*\
+  !*** ./node_modules/@themesberg/tailwind-datepicker/js/picker/views/DaysView.js ***!
+  \**********************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (/* binding */ DaysView)
+/* harmony export */ });
+/* harmony import */ var _lib_utils_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../lib/utils.js */ "./node_modules/@themesberg/tailwind-datepicker/js/lib/utils.js");
+/* harmony import */ var _lib_date_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../lib/date.js */ "./node_modules/@themesberg/tailwind-datepicker/js/lib/date.js");
+/* harmony import */ var _lib_date_format_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../lib/date-format.js */ "./node_modules/@themesberg/tailwind-datepicker/js/lib/date-format.js");
+/* harmony import */ var _lib_dom_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../lib/dom.js */ "./node_modules/@themesberg/tailwind-datepicker/js/lib/dom.js");
+/* harmony import */ var _templates_daysTemplate_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../templates/daysTemplate.js */ "./node_modules/@themesberg/tailwind-datepicker/js/picker/templates/daysTemplate.js");
+/* harmony import */ var _templates_calendarWeeksTemplate_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../templates/calendarWeeksTemplate.js */ "./node_modules/@themesberg/tailwind-datepicker/js/picker/templates/calendarWeeksTemplate.js");
+/* harmony import */ var _View_js__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./View.js */ "./node_modules/@themesberg/tailwind-datepicker/js/picker/views/View.js");
+
+
+
+
+
+
+
+
+class DaysView extends _View_js__WEBPACK_IMPORTED_MODULE_6__["default"] {
+  constructor(picker) {
+    super(picker, {
+      id: 0,
+      name: 'days',
+      cellClass: 'day',
+    });
+  }
+
+  init(options, onConstruction = true) {
+    if (onConstruction) {
+      const inner = (0,_lib_dom_js__WEBPACK_IMPORTED_MODULE_3__.parseHTML)(_templates_daysTemplate_js__WEBPACK_IMPORTED_MODULE_4__["default"]).firstChild;
+      this.dow = inner.firstChild;
+      this.grid = inner.lastChild;
+      this.element.appendChild(inner);
+    }
+    super.init(options);
+  }
+
+  setOptions(options) {
+    let updateDOW;
+
+    if ((0,_lib_utils_js__WEBPACK_IMPORTED_MODULE_0__.hasProperty)(options, 'minDate')) {
+      this.minDate = options.minDate;
+    }
+    if ((0,_lib_utils_js__WEBPACK_IMPORTED_MODULE_0__.hasProperty)(options, 'maxDate')) {
+      this.maxDate = options.maxDate;
+    }
+    if (options.datesDisabled) {
+      this.datesDisabled = options.datesDisabled;
+    }
+    if (options.daysOfWeekDisabled) {
+      this.daysOfWeekDisabled = options.daysOfWeekDisabled;
+      updateDOW = true;
+    }
+    if (options.daysOfWeekHighlighted) {
+      this.daysOfWeekHighlighted = options.daysOfWeekHighlighted;
+    }
+    if (options.todayHighlight !== undefined) {
+      this.todayHighlight = options.todayHighlight;
+    }
+    if (options.weekStart !== undefined) {
+      this.weekStart = options.weekStart;
+      this.weekEnd = options.weekEnd;
+      updateDOW = true;
+    }
+    if (options.locale) {
+      const locale = this.locale = options.locale;
+      this.dayNames = locale.daysMin;
+      this.switchLabelFormat = locale.titleFormat;
+      updateDOW = true;
+    }
+    if (options.beforeShowDay !== undefined) {
+      this.beforeShow = typeof options.beforeShowDay === 'function'
+        ? options.beforeShowDay
+        : undefined;
+    }
+
+    if (options.calendarWeeks !== undefined) {
+      if (options.calendarWeeks && !this.calendarWeeks) {
+        const weeksElem = (0,_lib_dom_js__WEBPACK_IMPORTED_MODULE_3__.parseHTML)(_templates_calendarWeeksTemplate_js__WEBPACK_IMPORTED_MODULE_5__["default"]).firstChild;
+        this.calendarWeeks = {
+          element: weeksElem,
+          dow: weeksElem.firstChild,
+          weeks: weeksElem.lastChild,
+        };
+        this.element.insertBefore(weeksElem, this.element.firstChild);
+      } else if (this.calendarWeeks && !options.calendarWeeks) {
+        this.element.removeChild(this.calendarWeeks.element);
+        this.calendarWeeks = null;
+      }
+    }
+    if (options.showDaysOfWeek !== undefined) {
+      if (options.showDaysOfWeek) {
+        (0,_lib_dom_js__WEBPACK_IMPORTED_MODULE_3__.showElement)(this.dow);
+        if (this.calendarWeeks) {
+          (0,_lib_dom_js__WEBPACK_IMPORTED_MODULE_3__.showElement)(this.calendarWeeks.dow);
+        }
+      } else {
+        (0,_lib_dom_js__WEBPACK_IMPORTED_MODULE_3__.hideElement)(this.dow);
+        if (this.calendarWeeks) {
+          (0,_lib_dom_js__WEBPACK_IMPORTED_MODULE_3__.hideElement)(this.calendarWeeks.dow);
+        }
+      }
+    }
+
+    // update days-of-week when locale, daysOfweekDisabled or weekStart is changed
+    if (updateDOW) {
+      Array.from(this.dow.children).forEach((el, index) => {
+        const dow = (this.weekStart + index) % 7;
+        el.textContent = this.dayNames[dow];
+        el.className = this.daysOfWeekDisabled.includes(dow) ? 'dow disabled text-center h-6 leading-6 text-sm font-medium text-gray-500 cursor-not-allowed' : 'dow text-center h-6 leading-6 text-sm font-medium text-gray-500';
+      });
+    }
+  }
+
+  // Apply update on the focused date to view's settings
+  updateFocus() {
+    const viewDate = new Date(this.picker.viewDate);
+    const viewYear = viewDate.getFullYear();
+    const viewMonth = viewDate.getMonth();
+    const firstOfMonth = (0,_lib_date_js__WEBPACK_IMPORTED_MODULE_1__.dateValue)(viewYear, viewMonth, 1);
+    const start = (0,_lib_date_js__WEBPACK_IMPORTED_MODULE_1__.dayOfTheWeekOf)(firstOfMonth, this.weekStart, this.weekStart);
+
+    this.first = firstOfMonth;
+    this.last = (0,_lib_date_js__WEBPACK_IMPORTED_MODULE_1__.dateValue)(viewYear, viewMonth + 1, 0);
+    this.start = start;
+    this.focused = this.picker.viewDate;
+  }
+
+  // Apply update on the selected dates to view's settings
+  updateSelection() {
+    const {dates, rangepicker} = this.picker.datepicker;
+    this.selected = dates;
+    if (rangepicker) {
+      this.range = rangepicker.dates;
+    }
+  }
+
+   // Update the entire view UI
+  render() {
+    // update today marker on ever render
+    this.today = this.todayHighlight ? (0,_lib_date_js__WEBPACK_IMPORTED_MODULE_1__.today)() : undefined;
+    // refresh disabled dates on every render in order to clear the ones added
+    // by beforeShow hook at previous render
+    this.disabled = [...this.datesDisabled];
+
+    const switchLabel = (0,_lib_date_format_js__WEBPACK_IMPORTED_MODULE_2__.formatDate)(this.focused, this.switchLabelFormat, this.locale);
+    this.picker.setViewSwitchLabel(switchLabel);
+    this.picker.setPrevBtnDisabled(this.first <= this.minDate);
+    this.picker.setNextBtnDisabled(this.last >= this.maxDate);
+
+    if (this.calendarWeeks) {
+      // start of the UTC week (Monday) of the 1st of the month
+      const startOfWeek = (0,_lib_date_js__WEBPACK_IMPORTED_MODULE_1__.dayOfTheWeekOf)(this.first, 1, 1);
+      Array.from(this.calendarWeeks.weeks.children).forEach((el, index) => {
+        el.textContent = (0,_lib_date_js__WEBPACK_IMPORTED_MODULE_1__.getWeek)((0,_lib_date_js__WEBPACK_IMPORTED_MODULE_1__.addWeeks)(startOfWeek, index));
+      });
+    }
+    Array.from(this.grid.children).forEach((el, index) => {
+      const classList = el.classList;
+      const current = (0,_lib_date_js__WEBPACK_IMPORTED_MODULE_1__.addDays)(this.start, index);
+      const date = new Date(current);
+      const day = date.getDay();
+
+      el.className = `datepicker-cell hover:bg-gray-100 block flex-1 leading-9 border-0 rounded-lg cursor-pointer text-center text-gray-900 font-semibold text-sm ${this.cellClass}`;
+      el.dataset.date = current;
+      el.textContent = date.getDate();
+
+      if (current < this.first) {
+        classList.add('prev', 'text-gray-500');
+      } else if (current > this.last) {
+        classList.add('next', 'text-gray-500');
+      }
+      if (this.today === current) {
+        classList.add('today', 'bg-gray-100');
+      }
+      if (current < this.minDate || current > this.maxDate || this.disabled.includes(current)) {
+        classList.add('disabled', 'cursor-not-allowed');
+      }
+      if (this.daysOfWeekDisabled.includes(day)) {
+        classList.add('disabled', 'cursor-not-allowed');
+        (0,_lib_utils_js__WEBPACK_IMPORTED_MODULE_0__.pushUnique)(this.disabled, current);
+      }
+      if (this.daysOfWeekHighlighted.includes(day)) {
+        classList.add('highlighted');
+      }
+      if (this.range) {
+        const [rangeStart, rangeEnd] = this.range;
+        if (current > rangeStart && current < rangeEnd) {
+          classList.add('range', 'bg-gray-200');
+          classList.remove('rounded-lg', 'rounded-l-lg', 'rounded-r-lg')
+        }
+        if (current === rangeStart) {
+          classList.add('range-start', 'bg-gray-100', 'rounded-l-lg');
+          classList.remove('rounded-lg', 'rounded-r-lg');
+        }
+        if (current === rangeEnd) {
+          classList.add('range-end', 'bg-gray-100', 'rounded-r-lg');
+          classList.remove('rounded-lg', 'rounded-l-lg');
+        }
+      }
+      if (this.selected.includes(current)) {
+        classList.add('selected', 'bg-blue-700', 'text-white');
+        classList.remove('text-gray-900', 'text-gray-500', 'hover:bg-gray-100');
+      }
+      if (current === this.focused) {
+        classList.add('focused');
+      }
+
+      if (this.beforeShow) {
+        this.performBeforeHook(el, current, current);
+      }
+    });
+  }
+
+  // Update the view UI by applying the changes of selected and focused items
+  refresh() {
+    const [rangeStart, rangeEnd] = this.range || [];
+    this.grid
+      .querySelectorAll('.range, .range-start, .range-end, .selected, .focused')
+      .forEach((el) => {
+        el.classList.remove('range', 'range-start', 'range-end', 'selected', 'bg-blue-700', 'text-white', 'focused', 'bg-gray-100');
+        el.classList.add('text-gray-900', 'rounded-lg');
+      });
+    Array.from(this.grid.children).forEach((el) => {
+      const current = Number(el.dataset.date);
+      const classList = el.classList;
+      if (current > rangeStart && current < rangeEnd) {
+        classList.add('range', 'bg-gray-200');
+        classList.remove('rounded-lg');
+      }
+      if (current === rangeStart) {
+        classList.add('range-start', 'bg-gray-200', 'rounded-l-lg');
+        classList.remove('rounded-lg', 'rounded-r-lg');
+      }
+      if (current === rangeEnd) {
+        classList.add('range-end', 'bg-gray-200', 'rounded-r-lg');
+        classList.remove('rounded-lg', 'rounded-l-lg');
+      }
+      if (this.selected.includes(current)) {
+        classList.add('selected', 'bg-blue-700', 'text-white');
+        classList.remove('text-gray-900', 'hover:bg-gray-100');
+      }
+      if (current === this.focused) {
+        classList.add('focused', 'bg-gray-100');
+      }
+    });
+  }
+
+  // Update the view UI by applying the change of focused item
+  refreshFocus() {
+    const index = Math.round((this.focused - this.start) / 86400000);
+    this.grid.querySelectorAll('.focused').forEach((el) => {
+      el.classList.remove('focused', 'bg-gray-100');
+    });
+    this.grid.children[index].classList.add('focused', 'bg-gray-100');
+  }
+}
+
+
+/***/ }),
+
+/***/ "./node_modules/@themesberg/tailwind-datepicker/js/picker/views/MonthsView.js":
+/*!************************************************************************************!*\
+  !*** ./node_modules/@themesberg/tailwind-datepicker/js/picker/views/MonthsView.js ***!
+  \************************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (/* binding */ MonthsView)
+/* harmony export */ });
+/* harmony import */ var _lib_utils_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../lib/utils.js */ "./node_modules/@themesberg/tailwind-datepicker/js/lib/utils.js");
+/* harmony import */ var _lib_date_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../lib/date.js */ "./node_modules/@themesberg/tailwind-datepicker/js/lib/date.js");
+/* harmony import */ var _lib_dom_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../lib/dom.js */ "./node_modules/@themesberg/tailwind-datepicker/js/lib/dom.js");
+/* harmony import */ var _View_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./View.js */ "./node_modules/@themesberg/tailwind-datepicker/js/picker/views/View.js");
+
+
+
+
+
+function computeMonthRange(range, thisYear) {
+  if (!range || !range[0] || !range[1]) {
+    return;
+  }
+
+  const [[startY, startM], [endY, endM]] = range;
+  if (startY > thisYear || endY < thisYear) {
+    return;
+  }
+  return [
+    startY === thisYear ? startM : -1,
+    endY === thisYear ? endM : 12,
+  ];
+}
+
+class MonthsView extends _View_js__WEBPACK_IMPORTED_MODULE_3__["default"] {
+  constructor(picker) {
+    super(picker, {
+      id: 1,
+      name: 'months',
+      cellClass: 'month',
+    });
+  }
+
+  init(options, onConstruction = true) {
+    if (onConstruction) {
+      this.grid = this.element;
+      this.element.classList.add('months', 'datepicker-grid', 'w-64', 'grid', 'grid-cols-4');
+      this.grid.appendChild((0,_lib_dom_js__WEBPACK_IMPORTED_MODULE_2__.parseHTML)((0,_lib_utils_js__WEBPACK_IMPORTED_MODULE_0__.createTagRepeat)('span', 12, {'data-month': ix => ix})));
+    }
+    super.init(options);
+  }
+
+  setOptions(options) {
+    if (options.locale) {
+      this.monthNames = options.locale.monthsShort;
+    }
+    if ((0,_lib_utils_js__WEBPACK_IMPORTED_MODULE_0__.hasProperty)(options, 'minDate')) {
+      if (options.minDate === undefined) {
+        this.minYear = this.minMonth = this.minDate = undefined;
+      } else {
+        const minDateObj = new Date(options.minDate);
+        this.minYear = minDateObj.getFullYear();
+        this.minMonth = minDateObj.getMonth();
+        this.minDate = minDateObj.setDate(1);
+      }
+    }
+    if ((0,_lib_utils_js__WEBPACK_IMPORTED_MODULE_0__.hasProperty)(options, 'maxDate')) {
+      if (options.maxDate === undefined) {
+        this.maxYear = this.maxMonth = this.maxDate = undefined;
+      } else {
+        const maxDateObj = new Date(options.maxDate);
+        this.maxYear = maxDateObj.getFullYear();
+        this.maxMonth = maxDateObj.getMonth();
+        this.maxDate = (0,_lib_date_js__WEBPACK_IMPORTED_MODULE_1__.dateValue)(this.maxYear, this.maxMonth + 1, 0);
+      }
+    }
+    if (options.beforeShowMonth !== undefined) {
+      this.beforeShow = typeof options.beforeShowMonth === 'function'
+        ? options.beforeShowMonth
+        : undefined;
+    }
+  }
+
+  // Update view's settings to reflect the viewDate set on the picker
+  updateFocus() {
+    const viewDate = new Date(this.picker.viewDate);
+    this.year = viewDate.getFullYear();
+    this.focused = viewDate.getMonth();
+  }
+
+  // Update view's settings to reflect the selected dates
+  updateSelection() {
+    const {dates, rangepicker} = this.picker.datepicker;
+    this.selected = dates.reduce((selected, timeValue) => {
+      const date = new Date(timeValue);
+      const year = date.getFullYear();
+      const month = date.getMonth();
+      if (selected[year] === undefined) {
+        selected[year] = [month];
+      } else {
+        (0,_lib_utils_js__WEBPACK_IMPORTED_MODULE_0__.pushUnique)(selected[year], month);
+      }
+      return selected;
+    }, {});
+    if (rangepicker && rangepicker.dates) {
+      this.range = rangepicker.dates.map(timeValue => {
+        const date = new Date(timeValue);
+        return isNaN(date) ? undefined : [date.getFullYear(), date.getMonth()];
+      });
+    }
+  }
+
+  // Update the entire view UI
+  render() {
+    // refresh disabled months on every render in order to clear the ones added
+    // by beforeShow hook at previous render
+    this.disabled = [];
+
+    this.picker.setViewSwitchLabel(this.year);
+    this.picker.setPrevBtnDisabled(this.year <= this.minYear);
+    this.picker.setNextBtnDisabled(this.year >= this.maxYear);
+
+    const selected = this.selected[this.year] || [];
+    const yrOutOfRange = this.year < this.minYear || this.year > this.maxYear;
+    const isMinYear = this.year === this.minYear;
+    const isMaxYear = this.year === this.maxYear;
+    const range = computeMonthRange(this.range, this.year);
+
+    Array.from(this.grid.children).forEach((el, index) => {
+      const classList = el.classList;
+      const date = (0,_lib_date_js__WEBPACK_IMPORTED_MODULE_1__.dateValue)(this.year, index, 1);
+
+      el.className = `datepicker-cell hover:bg-gray-100 block flex-1 leading-9 border-0 rounded-lg cursor-pointer text-center text-gray-900 font-semibold text-sm ${this.cellClass}`;
+      if (this.isMinView) {
+        el.dataset.date = date;
+      }
+      // reset text on every render to clear the custom content set
+      // by beforeShow hook at previous render
+      el.textContent = this.monthNames[index];
+
+      if (
+        yrOutOfRange
+        || isMinYear && index < this.minMonth
+        || isMaxYear && index > this.maxMonth
+      ) {
+        classList.add('disabled');
+      }
+      if (range) {
+        const [rangeStart, rangeEnd] = range;
+        if (index > rangeStart && index < rangeEnd) {
+          classList.add('range');
+        }
+        if (index === rangeStart) {
+          classList.add('range-start');
+        }
+        if (index === rangeEnd) {
+          classList.add('range-end');
+        }
+      }
+      if (selected.includes(index)) {
+        classList.add('selected', 'bg-blue-700', 'text-white');
+        classList.remove('text-gray-900', 'hover:bg-gray-100');
+      }
+      if (index === this.focused) {
+        classList.add('focused', 'bg-gray-100');
+      }
+
+      if (this.beforeShow) {
+        this.performBeforeHook(el, index, date);
+      }
+    });
+  }
+
+  // Update the view UI by applying the changes of selected and focused items
+  refresh() {
+    const selected = this.selected[this.year] || [];
+    const [rangeStart, rangeEnd] = computeMonthRange(this.range, this.year) || [];
+    this.grid
+      .querySelectorAll('.range, .range-start, .range-end, .selected, .focused')
+      .forEach((el) => {
+        el.classList.remove('range', 'range-start', 'range-end', 'selected', 'bg-blue-700', 'text-white', 'focused', 'bg-gray-100');
+        el.classList.add('text-gray-900', 'hover:bg-gray-100');
+      });
+    Array.from(this.grid.children).forEach((el, index) => {
+      const classList = el.classList;
+      if (index > rangeStart && index < rangeEnd) {
+        classList.add('range');
+      }
+      if (index === rangeStart) {
+        classList.add('range-start');
+      }
+      if (index === rangeEnd) {
+        classList.add('range-end');
+      }
+      if (selected.includes(index)) {
+        classList.add('selected', 'bg-blue-700', 'text-white');
+        classList.remove('text-gray-900', 'hover:bg-gray-100');
+      }
+      if (index === this.focused) {
+        classList.add('focused', 'bg-gray-100');
+      }
+    });
+  }
+
+  // Update the view UI by applying the change of focused item
+  refreshFocus() {
+    this.grid.querySelectorAll('.focused').forEach((el) => {
+      el.classList.remove('focused', 'bg-gray-100');
+    });
+    this.grid.children[this.focused].classList.add('focused', 'bg-gray-100');
+  }
+}
+
+/***/ }),
+
+/***/ "./node_modules/@themesberg/tailwind-datepicker/js/picker/views/View.js":
+/*!******************************************************************************!*\
+  !*** ./node_modules/@themesberg/tailwind-datepicker/js/picker/views/View.js ***!
+  \******************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (/* binding */ View)
+/* harmony export */ });
+/* harmony import */ var _lib_utils_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../lib/utils.js */ "./node_modules/@themesberg/tailwind-datepicker/js/lib/utils.js");
+/* harmony import */ var _lib_dom_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../lib/dom.js */ "./node_modules/@themesberg/tailwind-datepicker/js/lib/dom.js");
+
+
+
+// Base class of the view classes
+class View {
+  constructor(picker, config) {
+    Object.assign(this, config, {
+      picker,
+      element: (0,_lib_dom_js__WEBPACK_IMPORTED_MODULE_1__.parseHTML)(`<div class="datepicker-view flex"></div>`).firstChild,
+      selected: [],
+    });
+    this.init(this.picker.datepicker.config);
+  }
+
+  init(options) {
+    if (options.pickLevel !== undefined) {
+      this.isMinView = this.id === options.pickLevel;
+    }
+    this.setOptions(options);
+    this.updateFocus();
+    this.updateSelection();
+  }
+
+  // Execute beforeShow() callback and apply the result to the element
+  // args:
+  // - current - current value on the iteration on view rendering
+  // - timeValue - time value of the date to pass to beforeShow()
+  performBeforeHook(el, current, timeValue) {
+    let result = this.beforeShow(new Date(timeValue));
+    switch (typeof result) {
+      case 'boolean':
+        result = {enabled: result};
+        break;
+      case 'string':
+        result = {classes: result};
+    }
+
+    if (result) {
+      if (result.enabled === false) {
+        el.classList.add('disabled');
+        (0,_lib_utils_js__WEBPACK_IMPORTED_MODULE_0__.pushUnique)(this.disabled, current);
+      }
+      if (result.classes) {
+        const extraClasses = result.classes.split(/\s+/);
+        el.classList.add(...extraClasses);
+        if (extraClasses.includes('disabled')) {
+          (0,_lib_utils_js__WEBPACK_IMPORTED_MODULE_0__.pushUnique)(this.disabled, current);
+        }
+      }
+      if (result.content) {
+        (0,_lib_dom_js__WEBPACK_IMPORTED_MODULE_1__.replaceChildNodes)(el, result.content);
+      }
+    }
+  }
+}
+
+
+/***/ }),
+
+/***/ "./node_modules/@themesberg/tailwind-datepicker/js/picker/views/YearsView.js":
+/*!***********************************************************************************!*\
+  !*** ./node_modules/@themesberg/tailwind-datepicker/js/picker/views/YearsView.js ***!
+  \***********************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (/* binding */ YearsView)
+/* harmony export */ });
+/* harmony import */ var _lib_utils_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../lib/utils.js */ "./node_modules/@themesberg/tailwind-datepicker/js/lib/utils.js");
+/* harmony import */ var _lib_date_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../lib/date.js */ "./node_modules/@themesberg/tailwind-datepicker/js/lib/date.js");
+/* harmony import */ var _lib_dom_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../lib/dom.js */ "./node_modules/@themesberg/tailwind-datepicker/js/lib/dom.js");
+/* harmony import */ var _View_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./View.js */ "./node_modules/@themesberg/tailwind-datepicker/js/picker/views/View.js");
+
+
+
+
+
+function toTitleCase(word) {
+  return [...word].reduce((str, ch, ix) => str += ix ? ch : ch.toUpperCase(), '');
+}
+
+// Class representing the years and decades view elements
+class YearsView extends _View_js__WEBPACK_IMPORTED_MODULE_3__["default"] {
+  constructor(picker, config) {
+    super(picker, config);
+  }
+
+  init(options, onConstruction = true) {
+    if (onConstruction) {
+      this.navStep = this.step * 10;
+      this.beforeShowOption = `beforeShow${toTitleCase(this.cellClass)}`;
+      this.grid = this.element;
+      this.element.classList.add(this.name, 'datepicker-grid', 'w-64', 'grid', 'grid-cols-4');
+      this.grid.appendChild((0,_lib_dom_js__WEBPACK_IMPORTED_MODULE_2__.parseHTML)((0,_lib_utils_js__WEBPACK_IMPORTED_MODULE_0__.createTagRepeat)('span', 12)));
+    }
+    super.init(options);
+  }
+
+  setOptions(options) {
+    if ((0,_lib_utils_js__WEBPACK_IMPORTED_MODULE_0__.hasProperty)(options, 'minDate')) {
+      if (options.minDate === undefined) {
+        this.minYear = this.minDate = undefined;
+      } else {
+        this.minYear = (0,_lib_date_js__WEBPACK_IMPORTED_MODULE_1__.startOfYearPeriod)(options.minDate, this.step);
+        this.minDate = (0,_lib_date_js__WEBPACK_IMPORTED_MODULE_1__.dateValue)(this.minYear, 0, 1);
+      }
+    }
+    if ((0,_lib_utils_js__WEBPACK_IMPORTED_MODULE_0__.hasProperty)(options, 'maxDate')) {
+      if (options.maxDate === undefined) {
+        this.maxYear = this.maxDate = undefined;
+      } else {
+        this.maxYear = (0,_lib_date_js__WEBPACK_IMPORTED_MODULE_1__.startOfYearPeriod)(options.maxDate, this.step);
+        this.maxDate = (0,_lib_date_js__WEBPACK_IMPORTED_MODULE_1__.dateValue)(this.maxYear, 11, 31);
+      }
+    }
+    if (options[this.beforeShowOption] !== undefined) {
+      const beforeShow = options[this.beforeShowOption];
+      this.beforeShow = typeof beforeShow === 'function' ? beforeShow : undefined;
+    }
+  }
+
+  // Update view's settings to reflect the viewDate set on the picker
+  updateFocus() {
+    const viewDate = new Date(this.picker.viewDate);
+    const first = (0,_lib_date_js__WEBPACK_IMPORTED_MODULE_1__.startOfYearPeriod)(viewDate, this.navStep);
+    const last = first + 9 * this.step;
+
+    this.first = first;
+    this.last = last;
+    this.start = first - this.step;
+    this.focused = (0,_lib_date_js__WEBPACK_IMPORTED_MODULE_1__.startOfYearPeriod)(viewDate, this.step);
+  }
+
+  // Update view's settings to reflect the selected dates
+  updateSelection() {
+    const {dates, rangepicker} = this.picker.datepicker;
+    this.selected = dates.reduce((years, timeValue) => {
+      return (0,_lib_utils_js__WEBPACK_IMPORTED_MODULE_0__.pushUnique)(years, (0,_lib_date_js__WEBPACK_IMPORTED_MODULE_1__.startOfYearPeriod)(timeValue, this.step));
+    }, []);
+    if (rangepicker && rangepicker.dates) {
+      this.range = rangepicker.dates.map(timeValue => {
+        if (timeValue !== undefined) {
+          return (0,_lib_date_js__WEBPACK_IMPORTED_MODULE_1__.startOfYearPeriod)(timeValue, this.step);
+        }
+      });
+    }
+  }
+
+  // Update the entire view UI
+  render() {
+    // refresh disabled years on every render in order to clear the ones added
+    // by beforeShow hook at previous render
+    this.disabled = [];
+
+    this.picker.setViewSwitchLabel(`${this.first}-${this.last}`);
+    this.picker.setPrevBtnDisabled(this.first <= this.minYear);
+    this.picker.setNextBtnDisabled(this.last >= this.maxYear);
+
+    Array.from(this.grid.children).forEach((el, index) => {
+      const classList = el.classList;
+      const current = this.start + (index * this.step);
+      const date = (0,_lib_date_js__WEBPACK_IMPORTED_MODULE_1__.dateValue)(current, 0, 1);
+
+      el.className = `datepicker-cell hover:bg-gray-100 block flex-1 leading-9 border-0 rounded-lg cursor-pointer text-center text-gray-900 font-semibold text-sm ${this.cellClass}`;
+      if (this.isMinView) {
+        el.dataset.date = date;
+      }
+      el.textContent = el.dataset.year = current;
+
+      if (index === 0) {
+        classList.add('prev');
+      } else if (index === 11) {
+        classList.add('next');
+      }
+      if (current < this.minYear || current > this.maxYear) {
+        classList.add('disabled');
+      }
+      if (this.range) {
+        const [rangeStart, rangeEnd] = this.range;
+        if (current > rangeStart && current < rangeEnd) {
+          classList.add('range');
+        }
+        if (current === rangeStart) {
+          classList.add('range-start');
+        }
+        if (current === rangeEnd) {
+          classList.add('range-end');
+        }
+      }
+      if (this.selected.includes(current)) {
+        classList.add('selected', 'bg-blue-700', 'text-white');
+        classList.remove('text-gray-900', 'hover:bg-gray-100');
+      }
+      if (current === this.focused) {
+        classList.add('focused', 'bg-gray-100');
+      }
+
+      if (this.beforeShow) {
+        this.performBeforeHook(el, current, date);
+      }
+    });
+  }
+
+  // Update the view UI by applying the changes of selected and focused items
+  refresh() {
+    const [rangeStart, rangeEnd] = this.range || [];
+    this.grid
+      .querySelectorAll('.range, .range-start, .range-end, .selected, .focused')
+      .forEach((el) => {
+        el.classList.remove('range', 'range-start', 'range-end', 'selected', 'bg-blue-700', 'text-white', 'focused', 'bg-gray-100');
+      });
+    Array.from(this.grid.children).forEach((el) => {
+      const current = Number(el.textContent);
+      const classList = el.classList;
+      if (current > rangeStart && current < rangeEnd) {
+        classList.add('range');
+      }
+      if (current === rangeStart) {
+        classList.add('range-start');
+      }
+      if (current === rangeEnd) {
+        classList.add('range-end');
+      }
+      if (this.selected.includes(current)) {
+        classList.add('selected', 'bg-blue-700', 'text-white');
+        classList.remove('text-gray-900', 'hover:bg-gray-100');
+      }
+      if (current === this.focused) {
+        classList.add('focused', 'bg-gray-100');
+      }
+    });
+  }
+
+  // Update the view UI by applying the change of focused item
+  refreshFocus() {
+    const index = Math.round((this.focused - this.start) / this.step);
+    this.grid.querySelectorAll('.focused').forEach((el) => {
+      el.classList.remove('focused', 'bg-gray-100');
+    });
+    this.grid.children[index].classList.add('focused', 'bg-gray-100');
+  }
+}
+
+
+/***/ }),
+
 /***/ "./node_modules/axios/index.js":
 /*!*************************************!*\
   !*** ./node_modules/axios/index.js ***!
@@ -1913,7 +4949,7 @@ module.exports = function transformData(data, headers, fns) {
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-/* provided dependency */ var process = __webpack_require__(/*! process/browser */ "./node_modules/process/browser.js");
+/* provided dependency */ var process = __webpack_require__(/*! process/browser.js */ "./node_modules/process/browser.js");
 
 
 var utils = __webpack_require__(/*! ./utils */ "./node_modules/axios/lib/utils.js");
@@ -2968,6 +6004,212 @@ module.exports = {
   stripBOM: stripBOM
 };
 
+
+/***/ }),
+
+/***/ "./node_modules/babel-loader/lib/index.js??clonedRuleSet-5[0].rules[0].use[0]!./node_modules/vue-loader/lib/index.js??vue-loader-options!./resources/js/Components/Appointments/Chat.vue?vue&type=script&lang=js&":
+/*!************************************************************************************************************************************************************************************************************************!*\
+  !*** ./node_modules/babel-loader/lib/index.js??clonedRuleSet-5[0].rules[0].use[0]!./node_modules/vue-loader/lib/index.js??vue-loader-options!./resources/js/Components/Appointments/Chat.vue?vue&type=script&lang=js& ***!
+  \************************************************************************************************************************************************************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+//
+//
+//
+//
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = ({
+  name: 'Chat',
+  props: {
+    selected: Object
+  }
+});
+
+/***/ }),
+
+/***/ "./node_modules/babel-loader/lib/index.js??clonedRuleSet-5[0].rules[0].use[0]!./node_modules/vue-loader/lib/index.js??vue-loader-options!./resources/js/Components/Appointments/Form.vue?vue&type=script&lang=js&":
+/*!************************************************************************************************************************************************************************************************************************!*\
+  !*** ./node_modules/babel-loader/lib/index.js??clonedRuleSet-5[0].rules[0].use[0]!./node_modules/vue-loader/lib/index.js??vue-loader-options!./resources/js/Components/Appointments/Form.vue?vue&type=script&lang=js& ***!
+  \************************************************************************************************************************************************************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _themesberg_tailwind_datepicker_Datepicker__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @themesberg/tailwind-datepicker/Datepicker */ "./node_modules/@themesberg/tailwind-datepicker/js/Datepicker.js");
+/* harmony import */ var _Jetstream_Textarea_vue__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../Jetstream/Textarea.vue */ "./resources/js/Jetstream/Textarea.vue");
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+
+
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = ({
+  name: 'Form',
+  components: {
+    Textarea: _Jetstream_Textarea_vue__WEBPACK_IMPORTED_MODULE_1__["default"],
+    Datepicker: _themesberg_tailwind_datepicker_Datepicker__WEBPACK_IMPORTED_MODULE_0__["default"]
+  },
+  props: {
+    newAppointmentShop: Object
+  },
+  data: function data() {
+    return {
+      form: this.$inertia.form({
+        subject: null,
+        datetime: null,
+        car: null,
+        details: null,
+        shopId: this.newAppointmentShop.id
+      }),
+      cars: [{
+        id: 1,
+        name: 'Car 1',
+        brand: 'bmw',
+        year: '1999'
+      }, {
+        id: 2,
+        name: 'Car 2',
+        brand: 'audi',
+        year: '1997'
+      }, {
+        id: 3,
+        name: 'Car 3',
+        brand: 'nissan',
+        year: '1998'
+      }]
+    };
+  },
+  mounted: function mounted() {
+    new _themesberg_tailwind_datepicker_Datepicker__WEBPACK_IMPORTED_MODULE_0__["default"](this.$refs.datepicker);
+  },
+  methods: {
+    createAppointment: function createAppointment() {
+      this.form.datetime = this.$refs.datepicker.value;
+      this.form.post(route('create.appointment'), {
+        preserveScroll: true
+      });
+    }
+  }
+});
+
+/***/ }),
+
+/***/ "./node_modules/babel-loader/lib/index.js??clonedRuleSet-5[0].rules[0].use[0]!./node_modules/vue-loader/lib/index.js??vue-loader-options!./resources/js/Components/Appointments/List.vue?vue&type=script&lang=js&":
+/*!************************************************************************************************************************************************************************************************************************!*\
+  !*** ./node_modules/babel-loader/lib/index.js??clonedRuleSet-5[0].rules[0].use[0]!./node_modules/vue-loader/lib/index.js??vue-loader-options!./resources/js/Components/Appointments/List.vue?vue&type=script&lang=js& ***!
+  \************************************************************************************************************************************************************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = ({
+  name: 'List',
+  props: {
+    newAppointment: Boolean,
+    userAppointments: Array,
+    newAppointmentShop: Object,
+    selected: Object
+  },
+  methods: {
+    filterDate: function filterDate(fullDatetime) {
+      return fullDatetime.split(' ')[0];
+    },
+    updateSelectedAppointment: function updateSelectedAppointment(appointment) {
+      this.$emit('updateSelectedAppointment', appointment);
+    }
+  }
+});
 
 /***/ }),
 
@@ -4881,6 +8123,9 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
 /* harmony import */ var _Layouts_AppLayout__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @/Layouts/AppLayout */ "./resources/js/Layouts/AppLayout.vue");
+/* harmony import */ var _Components_Appointments_List__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @/Components/Appointments/List */ "./resources/js/Components/Appointments/List.vue");
+/* harmony import */ var _Components_Appointments_Form__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @/Components/Appointments/Form */ "./resources/js/Components/Appointments/Form.vue");
+/* harmony import */ var _Components_Appointments_Chat__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @/Components/Appointments/Chat */ "./resources/js/Components/Appointments/Chat.vue");
 //
 //
 //
@@ -4899,12 +8144,47 @@ __webpack_require__.r(__webpack_exports__);
 //
 //
 //
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+
+
+
 
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = ({
   components: {
-    AppLayout: _Layouts_AppLayout__WEBPACK_IMPORTED_MODULE_0__["default"]
-  } // $page.props.userAppointments
-
+    AppLayout: _Layouts_AppLayout__WEBPACK_IMPORTED_MODULE_0__["default"],
+    AppointmentsList: _Components_Appointments_List__WEBPACK_IMPORTED_MODULE_1__["default"],
+    AppointmentsForm: _Components_Appointments_Form__WEBPACK_IMPORTED_MODULE_2__["default"],
+    AppointmentsChat: _Components_Appointments_Chat__WEBPACK_IMPORTED_MODULE_3__["default"]
+  },
+  props: {
+    newAppointment: Boolean,
+    userAppointments: Array,
+    newAppointmentShop: Object
+  },
+  data: function data() {
+    return {
+      selected: null
+    };
+  },
+  mounted: function mounted() {
+    if (!this.selected) {
+      this.selected = this.userAppointments[0];
+    }
+  },
+  methods: {
+    updateSelectedAppointment: function updateSelectedAppointment(appointment) {
+      this.selected = appointment;
+    }
+  }
 });
 
 /***/ }),
@@ -26601,7 +29881,7 @@ var gPO = (typeof Reflect === 'function' ? Reflect.getPrototypeOf : Object.getPr
         : null
 );
 
-var inspectCustom = __webpack_require__(/*! ./util.inspect */ "?4f7e").custom;
+var inspectCustom = (__webpack_require__(/*! ./util.inspect */ "?2128").custom);
 var inspectSymbol = inspectCustom && isSymbol(inspectCustom) ? inspectCustom : null;
 var toStringTag = typeof Symbol === 'function' && typeof Symbol.toStringTag !== 'undefined' ? Symbol.toStringTag : null;
 
@@ -28578,7 +31858,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
 /* harmony import */ var _placeInput_vue_vue_type_template_id_c1ab87be___WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./placeInput.vue?vue&type=template&id=c1ab87be& */ "./node_modules/vue2-google-maps/dist/components/placeInput.vue?vue&type=template&id=c1ab87be&");
-/* harmony import */ var _placeInputImpl_js_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./placeInputImpl.js?vue&type=script&lang=js& */ "./node_modules/vue2-google-maps/dist/components/placeInputImpl.js?vue&type=script&lang=js&?9251");
+/* harmony import */ var _placeInputImpl_js_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./placeInputImpl.js?vue&type=script&lang=js& */ "./node_modules/vue2-google-maps/dist/components/placeInputImpl.js?vue&type=script&lang=js&?79b4");
 /* harmony import */ var _vue_loader_lib_runtime_componentNormalizer_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! !../../../vue-loader/lib/runtime/componentNormalizer.js */ "./node_modules/vue-loader/lib/runtime/componentNormalizer.js");
 
 
@@ -28667,6 +31947,123 @@ __webpack_require__.r(__webpack_exports__);
 
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = ((function (x) { return x.default || x })(__webpack_require__(/*! ./streetViewPanoramaImpl.js */ "./node_modules/vue2-google-maps/dist/components/streetViewPanoramaImpl.js")));
 
+
+/***/ }),
+
+/***/ "./resources/js/Components/Appointments/Chat.vue":
+/*!*******************************************************!*\
+  !*** ./resources/js/Components/Appointments/Chat.vue ***!
+  \*******************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _Chat_vue_vue_type_template_id_43fd2fb8___WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./Chat.vue?vue&type=template&id=43fd2fb8& */ "./resources/js/Components/Appointments/Chat.vue?vue&type=template&id=43fd2fb8&");
+/* harmony import */ var _Chat_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./Chat.vue?vue&type=script&lang=js& */ "./resources/js/Components/Appointments/Chat.vue?vue&type=script&lang=js&");
+/* harmony import */ var _node_modules_vue_loader_lib_runtime_componentNormalizer_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! !../../../../node_modules/vue-loader/lib/runtime/componentNormalizer.js */ "./node_modules/vue-loader/lib/runtime/componentNormalizer.js");
+
+
+
+
+
+/* normalize component */
+;
+var component = (0,_node_modules_vue_loader_lib_runtime_componentNormalizer_js__WEBPACK_IMPORTED_MODULE_2__["default"])(
+  _Chat_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_1__["default"],
+  _Chat_vue_vue_type_template_id_43fd2fb8___WEBPACK_IMPORTED_MODULE_0__.render,
+  _Chat_vue_vue_type_template_id_43fd2fb8___WEBPACK_IMPORTED_MODULE_0__.staticRenderFns,
+  false,
+  null,
+  null,
+  null
+  
+)
+
+/* hot reload */
+if (false) { var api; }
+component.options.__file = "resources/js/Components/Appointments/Chat.vue"
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (component.exports);
+
+/***/ }),
+
+/***/ "./resources/js/Components/Appointments/Form.vue":
+/*!*******************************************************!*\
+  !*** ./resources/js/Components/Appointments/Form.vue ***!
+  \*******************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _Form_vue_vue_type_template_id_0a8c1324___WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./Form.vue?vue&type=template&id=0a8c1324& */ "./resources/js/Components/Appointments/Form.vue?vue&type=template&id=0a8c1324&");
+/* harmony import */ var _Form_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./Form.vue?vue&type=script&lang=js& */ "./resources/js/Components/Appointments/Form.vue?vue&type=script&lang=js&");
+/* harmony import */ var _node_modules_vue_loader_lib_runtime_componentNormalizer_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! !../../../../node_modules/vue-loader/lib/runtime/componentNormalizer.js */ "./node_modules/vue-loader/lib/runtime/componentNormalizer.js");
+
+
+
+
+
+/* normalize component */
+;
+var component = (0,_node_modules_vue_loader_lib_runtime_componentNormalizer_js__WEBPACK_IMPORTED_MODULE_2__["default"])(
+  _Form_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_1__["default"],
+  _Form_vue_vue_type_template_id_0a8c1324___WEBPACK_IMPORTED_MODULE_0__.render,
+  _Form_vue_vue_type_template_id_0a8c1324___WEBPACK_IMPORTED_MODULE_0__.staticRenderFns,
+  false,
+  null,
+  null,
+  null
+  
+)
+
+/* hot reload */
+if (false) { var api; }
+component.options.__file = "resources/js/Components/Appointments/Form.vue"
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (component.exports);
+
+/***/ }),
+
+/***/ "./resources/js/Components/Appointments/List.vue":
+/*!*******************************************************!*\
+  !*** ./resources/js/Components/Appointments/List.vue ***!
+  \*******************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _List_vue_vue_type_template_id_3e8539fe___WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./List.vue?vue&type=template&id=3e8539fe& */ "./resources/js/Components/Appointments/List.vue?vue&type=template&id=3e8539fe&");
+/* harmony import */ var _List_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./List.vue?vue&type=script&lang=js& */ "./resources/js/Components/Appointments/List.vue?vue&type=script&lang=js&");
+/* harmony import */ var _node_modules_vue_loader_lib_runtime_componentNormalizer_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! !../../../../node_modules/vue-loader/lib/runtime/componentNormalizer.js */ "./node_modules/vue-loader/lib/runtime/componentNormalizer.js");
+
+
+
+
+
+/* normalize component */
+;
+var component = (0,_node_modules_vue_loader_lib_runtime_componentNormalizer_js__WEBPACK_IMPORTED_MODULE_2__["default"])(
+  _List_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_1__["default"],
+  _List_vue_vue_type_template_id_3e8539fe___WEBPACK_IMPORTED_MODULE_0__.render,
+  _List_vue_vue_type_template_id_3e8539fe___WEBPACK_IMPORTED_MODULE_0__.staticRenderFns,
+  false,
+  null,
+  null,
+  null
+  
+)
+
+/* hot reload */
+if (false) { var api; }
+component.options.__file = "resources/js/Components/Appointments/List.vue"
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (component.exports);
 
 /***/ }),
 
@@ -30688,6 +34085,54 @@ component.options.__file = "resources/js/Pages/TermsOfService.vue"
 
 /***/ }),
 
+/***/ "./resources/js/Components/Appointments/Chat.vue?vue&type=script&lang=js&":
+/*!********************************************************************************!*\
+  !*** ./resources/js/Components/Appointments/Chat.vue?vue&type=script&lang=js& ***!
+  \********************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _node_modules_babel_loader_lib_index_js_clonedRuleSet_5_0_rules_0_use_0_node_modules_vue_loader_lib_index_js_vue_loader_options_Chat_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! -!../../../../node_modules/babel-loader/lib/index.js??clonedRuleSet-5[0].rules[0].use[0]!../../../../node_modules/vue-loader/lib/index.js??vue-loader-options!./Chat.vue?vue&type=script&lang=js& */ "./node_modules/babel-loader/lib/index.js??clonedRuleSet-5[0].rules[0].use[0]!./node_modules/vue-loader/lib/index.js??vue-loader-options!./resources/js/Components/Appointments/Chat.vue?vue&type=script&lang=js&");
+ /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (_node_modules_babel_loader_lib_index_js_clonedRuleSet_5_0_rules_0_use_0_node_modules_vue_loader_lib_index_js_vue_loader_options_Chat_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_0__["default"]); 
+
+/***/ }),
+
+/***/ "./resources/js/Components/Appointments/Form.vue?vue&type=script&lang=js&":
+/*!********************************************************************************!*\
+  !*** ./resources/js/Components/Appointments/Form.vue?vue&type=script&lang=js& ***!
+  \********************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _node_modules_babel_loader_lib_index_js_clonedRuleSet_5_0_rules_0_use_0_node_modules_vue_loader_lib_index_js_vue_loader_options_Form_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! -!../../../../node_modules/babel-loader/lib/index.js??clonedRuleSet-5[0].rules[0].use[0]!../../../../node_modules/vue-loader/lib/index.js??vue-loader-options!./Form.vue?vue&type=script&lang=js& */ "./node_modules/babel-loader/lib/index.js??clonedRuleSet-5[0].rules[0].use[0]!./node_modules/vue-loader/lib/index.js??vue-loader-options!./resources/js/Components/Appointments/Form.vue?vue&type=script&lang=js&");
+ /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (_node_modules_babel_loader_lib_index_js_clonedRuleSet_5_0_rules_0_use_0_node_modules_vue_loader_lib_index_js_vue_loader_options_Form_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_0__["default"]); 
+
+/***/ }),
+
+/***/ "./resources/js/Components/Appointments/List.vue?vue&type=script&lang=js&":
+/*!********************************************************************************!*\
+  !*** ./resources/js/Components/Appointments/List.vue?vue&type=script&lang=js& ***!
+  \********************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _node_modules_babel_loader_lib_index_js_clonedRuleSet_5_0_rules_0_use_0_node_modules_vue_loader_lib_index_js_vue_loader_options_List_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! -!../../../../node_modules/babel-loader/lib/index.js??clonedRuleSet-5[0].rules[0].use[0]!../../../../node_modules/vue-loader/lib/index.js??vue-loader-options!./List.vue?vue&type=script&lang=js& */ "./node_modules/babel-loader/lib/index.js??clonedRuleSet-5[0].rules[0].use[0]!./node_modules/vue-loader/lib/index.js??vue-loader-options!./resources/js/Components/Appointments/List.vue?vue&type=script&lang=js&");
+ /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (_node_modules_babel_loader_lib_index_js_clonedRuleSet_5_0_rules_0_use_0_node_modules_vue_loader_lib_index_js_vue_loader_options_List_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_0__["default"]); 
+
+/***/ }),
+
 /***/ "./resources/js/Components/EditShop/UpdateInformation.vue?vue&type=script&lang=js&":
 /*!*****************************************************************************************!*\
   !*** ./resources/js/Components/EditShop/UpdateInformation.vue?vue&type=script&lang=js& ***!
@@ -31615,6 +35060,57 @@ __webpack_require__.r(__webpack_exports__);
 
 /***/ }),
 
+/***/ "./resources/js/Components/Appointments/Chat.vue?vue&type=template&id=43fd2fb8&":
+/*!**************************************************************************************!*\
+  !*** ./resources/js/Components/Appointments/Chat.vue?vue&type=template&id=43fd2fb8& ***!
+  \**************************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "render": () => (/* reexport safe */ _node_modules_vue_loader_lib_loaders_templateLoader_js_vue_loader_options_node_modules_vue_loader_lib_index_js_vue_loader_options_Chat_vue_vue_type_template_id_43fd2fb8___WEBPACK_IMPORTED_MODULE_0__.render),
+/* harmony export */   "staticRenderFns": () => (/* reexport safe */ _node_modules_vue_loader_lib_loaders_templateLoader_js_vue_loader_options_node_modules_vue_loader_lib_index_js_vue_loader_options_Chat_vue_vue_type_template_id_43fd2fb8___WEBPACK_IMPORTED_MODULE_0__.staticRenderFns)
+/* harmony export */ });
+/* harmony import */ var _node_modules_vue_loader_lib_loaders_templateLoader_js_vue_loader_options_node_modules_vue_loader_lib_index_js_vue_loader_options_Chat_vue_vue_type_template_id_43fd2fb8___WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! -!../../../../node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!../../../../node_modules/vue-loader/lib/index.js??vue-loader-options!./Chat.vue?vue&type=template&id=43fd2fb8& */ "./node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!./node_modules/vue-loader/lib/index.js??vue-loader-options!./resources/js/Components/Appointments/Chat.vue?vue&type=template&id=43fd2fb8&");
+
+
+/***/ }),
+
+/***/ "./resources/js/Components/Appointments/Form.vue?vue&type=template&id=0a8c1324&":
+/*!**************************************************************************************!*\
+  !*** ./resources/js/Components/Appointments/Form.vue?vue&type=template&id=0a8c1324& ***!
+  \**************************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "render": () => (/* reexport safe */ _node_modules_vue_loader_lib_loaders_templateLoader_js_vue_loader_options_node_modules_vue_loader_lib_index_js_vue_loader_options_Form_vue_vue_type_template_id_0a8c1324___WEBPACK_IMPORTED_MODULE_0__.render),
+/* harmony export */   "staticRenderFns": () => (/* reexport safe */ _node_modules_vue_loader_lib_loaders_templateLoader_js_vue_loader_options_node_modules_vue_loader_lib_index_js_vue_loader_options_Form_vue_vue_type_template_id_0a8c1324___WEBPACK_IMPORTED_MODULE_0__.staticRenderFns)
+/* harmony export */ });
+/* harmony import */ var _node_modules_vue_loader_lib_loaders_templateLoader_js_vue_loader_options_node_modules_vue_loader_lib_index_js_vue_loader_options_Form_vue_vue_type_template_id_0a8c1324___WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! -!../../../../node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!../../../../node_modules/vue-loader/lib/index.js??vue-loader-options!./Form.vue?vue&type=template&id=0a8c1324& */ "./node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!./node_modules/vue-loader/lib/index.js??vue-loader-options!./resources/js/Components/Appointments/Form.vue?vue&type=template&id=0a8c1324&");
+
+
+/***/ }),
+
+/***/ "./resources/js/Components/Appointments/List.vue?vue&type=template&id=3e8539fe&":
+/*!**************************************************************************************!*\
+  !*** ./resources/js/Components/Appointments/List.vue?vue&type=template&id=3e8539fe& ***!
+  \**************************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "render": () => (/* reexport safe */ _node_modules_vue_loader_lib_loaders_templateLoader_js_vue_loader_options_node_modules_vue_loader_lib_index_js_vue_loader_options_List_vue_vue_type_template_id_3e8539fe___WEBPACK_IMPORTED_MODULE_0__.render),
+/* harmony export */   "staticRenderFns": () => (/* reexport safe */ _node_modules_vue_loader_lib_loaders_templateLoader_js_vue_loader_options_node_modules_vue_loader_lib_index_js_vue_loader_options_List_vue_vue_type_template_id_3e8539fe___WEBPACK_IMPORTED_MODULE_0__.staticRenderFns)
+/* harmony export */ });
+/* harmony import */ var _node_modules_vue_loader_lib_loaders_templateLoader_js_vue_loader_options_node_modules_vue_loader_lib_index_js_vue_loader_options_List_vue_vue_type_template_id_3e8539fe___WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! -!../../../../node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!../../../../node_modules/vue-loader/lib/index.js??vue-loader-options!./List.vue?vue&type=template&id=3e8539fe& */ "./node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!./node_modules/vue-loader/lib/index.js??vue-loader-options!./resources/js/Components/Appointments/List.vue?vue&type=template&id=3e8539fe&");
+
+
+/***/ }),
+
 /***/ "./resources/js/Components/EditShop/UpdateInformation.vue?vue&type=template&id=07fedcdf&":
 /*!***********************************************************************************************!*\
   !*** ./resources/js/Components/EditShop/UpdateInformation.vue?vue&type=template&id=07fedcdf& ***!
@@ -32499,7 +35995,7 @@ __webpack_require__.r(__webpack_exports__);
 
 /***/ }),
 
-/***/ "./node_modules/vue2-google-maps/dist/components/placeInputImpl.js?vue&type=script&lang=js&?9251":
+/***/ "./node_modules/vue2-google-maps/dist/components/placeInputImpl.js?vue&type=script&lang=js&?79b4":
 /*!**************************************************************************************************!*\
   !*** ./node_modules/vue2-google-maps/dist/components/placeInputImpl.js?vue&type=script&lang=js& ***!
   \**************************************************************************************************/
@@ -32511,7 +36007,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__),
 /* harmony export */   "__esModule": () => (/* reexport safe */ _placeInputImpl_js_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_0__.__esModule)
 /* harmony export */ });
-/* harmony import */ var _placeInputImpl_js_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! -!./placeInputImpl.js?vue&type=script&lang=js& */ "./node_modules/vue2-google-maps/dist/components/placeInputImpl.js?vue&type=script&lang=js&?0c5e");
+/* harmony import */ var _placeInputImpl_js_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! -!./placeInputImpl.js?vue&type=script&lang=js& */ "./node_modules/vue2-google-maps/dist/components/placeInputImpl.js?vue&type=script&lang=js&?0ebb");
  /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (_placeInputImpl_js_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_0__["default"]); 
 
 /***/ }),
@@ -32528,7 +36024,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -32556,7 +36052,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -32581,7 +36077,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -32593,7 +36089,7 @@ var render = function() {
       _vm._v(" "),
       _c("div", { staticClass: "vue-map-hidden" }, [_vm._t("default")], 2),
       _vm._v(" "),
-      _vm._t("visible")
+      _vm._t("visible"),
     ],
     2
   )
@@ -32617,7 +36113,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -32627,8 +36123,8 @@ var render = function() {
     _c("input", {
       ref: "input",
       class: _vm.className,
-      attrs: { type: "text", placeholder: _vm.placeholder }
-    })
+      attrs: { type: "text", placeholder: _vm.placeholder },
+    }),
   ])
 }
 var staticRenderFns = []
@@ -32650,7 +36146,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -32660,13 +36156,328 @@ var render = function() {
     [
       _c("div", {
         ref: "vue-street-view-pano",
-        staticClass: "vue-street-view-pano"
+        staticClass: "vue-street-view-pano",
       }),
       _vm._v(" "),
-      _vm._t("default")
+      _vm._t("default"),
     ],
     2
   )
+}
+var staticRenderFns = []
+render._withStripped = true
+
+
+
+/***/ }),
+
+/***/ "./node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!./node_modules/vue-loader/lib/index.js??vue-loader-options!./resources/js/Components/Appointments/Chat.vue?vue&type=template&id=43fd2fb8&":
+/*!*****************************************************************************************************************************************************************************************************************************!*\
+  !*** ./node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!./node_modules/vue-loader/lib/index.js??vue-loader-options!./resources/js/Components/Appointments/Chat.vue?vue&type=template&id=43fd2fb8& ***!
+  \*****************************************************************************************************************************************************************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "render": () => (/* binding */ render),
+/* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
+/* harmony export */ });
+var render = function () {
+  var _vm = this
+  var _h = _vm.$createElement
+  var _c = _vm._self._c || _h
+  return _c("span", { staticClass: "text-right" }, [_vm._v("Chat")])
+}
+var staticRenderFns = []
+render._withStripped = true
+
+
+
+/***/ }),
+
+/***/ "./node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!./node_modules/vue-loader/lib/index.js??vue-loader-options!./resources/js/Components/Appointments/Form.vue?vue&type=template&id=0a8c1324&":
+/*!*****************************************************************************************************************************************************************************************************************************!*\
+  !*** ./node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!./node_modules/vue-loader/lib/index.js??vue-loader-options!./resources/js/Components/Appointments/Form.vue?vue&type=template&id=0a8c1324& ***!
+  \*****************************************************************************************************************************************************************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "render": () => (/* binding */ render),
+/* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
+/* harmony export */ });
+var render = function () {
+  var _vm = this
+  var _h = _vm.$createElement
+  var _c = _vm._self._c || _h
+  return _c("div", { staticClass: "w-full px-8 pt-6 pb-8 mb-4" }, [
+    _c(
+      "form",
+      {
+        on: {
+          submit: function ($event) {
+            return _vm.createAppointment()
+          },
+        },
+      },
+      [
+        _c("div", { staticClass: "mb-4" }, [
+          _c(
+            "label",
+            {
+              staticClass: "block font-medium text-sm text-gray-700",
+              attrs: { for: "username" },
+            },
+            [_vm._v("\n\t\t\t\t\tSubject\n\t\t\t\t")]
+          ),
+          _vm._v(" "),
+          _c("input", {
+            directives: [
+              {
+                name: "model",
+                rawName: "v-model",
+                value: _vm.form.subject,
+                expression: "form.subject",
+              },
+            ],
+            staticClass:
+              "border-gray-300 focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 rounded-md shadow-sm mt-1 block w-full",
+            attrs: {
+              id: "username",
+              type: "text",
+              placeholder: "Brief explanation of your appointment",
+            },
+            domProps: { value: _vm.form.subject },
+            on: {
+              input: function ($event) {
+                if ($event.target.composing) {
+                  return
+                }
+                _vm.$set(_vm.form, "subject", $event.target.value)
+              },
+            },
+          }),
+        ]),
+        _vm._v(" "),
+        _c("div", { staticClass: "mb-4" }, [
+          _c(
+            "label",
+            {
+              staticClass: "block font-medium text-sm text-gray-700",
+              attrs: { for: "username" },
+            },
+            [_vm._v("\n\t\t\t\t\tDate & Time\n\t\t\t\t")]
+          ),
+          _vm._v(" "),
+          _c("div", { staticClass: "relative" }, [
+            _c(
+              "div",
+              {
+                staticClass:
+                  "absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none",
+              },
+              [
+                _c(
+                  "svg",
+                  {
+                    staticClass: "w-5 h-5 text-gray-500",
+                    attrs: {
+                      fill: "currentColor",
+                      viewBox: "0 0 20 20",
+                      xmlns: "http://www.w3.org/2000/svg",
+                    },
+                  },
+                  [
+                    _c("path", {
+                      attrs: {
+                        "fill-rule": "evenodd",
+                        d: "M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z",
+                        "clip-rule": "evenodd",
+                      },
+                    }),
+                  ]
+                ),
+              ]
+            ),
+            _vm._v(" "),
+            _c("input", {
+              ref: "datepicker",
+              staticClass:
+                "border-gray-300 focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 rounded-md shadow-sm mt-1 block w-full pl-10",
+              attrs: { type: "text", placeholder: "Select date" },
+            }),
+          ]),
+        ]),
+        _vm._v(" "),
+        _c("div", { staticClass: "mb-4" }, [
+          _c(
+            "label",
+            {
+              staticClass: "block font-medium text-sm text-gray-700",
+              attrs: { for: "username" },
+            },
+            [_vm._v("\n\t\t\t\t\tCar\n\t\t\t\t")]
+          ),
+          _vm._v(" "),
+          _c(
+            "select",
+            {
+              directives: [
+                {
+                  name: "model",
+                  rawName: "v-model",
+                  value: _vm.form.car,
+                  expression: "form.car",
+                },
+              ],
+              staticClass:
+                "border-gray-300 focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 rounded-md shadow-sm mt-1 block w-full",
+              on: {
+                change: function ($event) {
+                  var $$selectedVal = Array.prototype.filter
+                    .call($event.target.options, function (o) {
+                      return o.selected
+                    })
+                    .map(function (o) {
+                      var val = "_value" in o ? o._value : o.value
+                      return val
+                    })
+                  _vm.$set(
+                    _vm.form,
+                    "car",
+                    $event.target.multiple ? $$selectedVal : $$selectedVal[0]
+                  )
+                },
+              },
+            },
+            _vm._l(_vm.cars, function (car) {
+              return _c("option", { key: car.id, domProps: { value: car } }, [
+                _vm._v(_vm._s(car.name)),
+              ])
+            }),
+            0
+          ),
+        ]),
+        _vm._v(" "),
+        _c("div", { staticClass: "mb-4" }, [
+          _c(
+            "label",
+            {
+              staticClass: "block font-medium text-sm text-gray-700",
+              attrs: { for: "username" },
+            },
+            [_vm._v("\n\t\t\t\t\tDetails\n\t\t\t\t")]
+          ),
+          _vm._v(" "),
+          _c("textarea", {
+            directives: [
+              {
+                name: "model",
+                rawName: "v-model",
+                value: _vm.form.details,
+                expression: "form.details",
+              },
+            ],
+            staticClass:
+              "border-gray-300 focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 rounded-md shadow-sm mt-1 block w-full",
+            attrs: {
+              id: "username",
+              type: "text",
+              rows: "4",
+              placeholder: "More detailed explanation of your request",
+            },
+            domProps: { value: _vm.form.details },
+            on: {
+              input: function ($event) {
+                if ($event.target.composing) {
+                  return
+                }
+                _vm.$set(_vm.form, "details", $event.target.value)
+              },
+            },
+          }),
+        ]),
+        _vm._v(" "),
+        _c("div", { staticClass: "flex items-center justify-between" }, [
+          _c(
+            "button",
+            {
+              staticClass:
+                "mt-4 py-2 px-4 border border-transparent shadow-sm text-sm rounded-md font-bold text-white bg-indigo-400 hover:bg-indigo-700",
+              attrs: { type: "button" },
+              on: {
+                click: function ($event) {
+                  return _vm.createAppointment()
+                },
+              },
+            },
+            [_vm._v("\n\t\t\t\t\tCreate Appointment\n\t\t\t\t")]
+          ),
+        ]),
+      ]
+    ),
+  ])
+}
+var staticRenderFns = []
+render._withStripped = true
+
+
+
+/***/ }),
+
+/***/ "./node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!./node_modules/vue-loader/lib/index.js??vue-loader-options!./resources/js/Components/Appointments/List.vue?vue&type=template&id=3e8539fe&":
+/*!*****************************************************************************************************************************************************************************************************************************!*\
+  !*** ./node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!./node_modules/vue-loader/lib/index.js??vue-loader-options!./resources/js/Components/Appointments/List.vue?vue&type=template&id=3e8539fe& ***!
+  \*****************************************************************************************************************************************************************************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "render": () => (/* binding */ render),
+/* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
+/* harmony export */ });
+var render = function () {
+  var _vm = this
+  var _h = _vm.$createElement
+  var _c = _vm._self._c || _h
+  return _vm.selected
+    ? _c(
+        "div",
+        _vm._l(_vm.userAppointments, function (appointment) {
+          return _c(
+            "div",
+            {
+              key: appointment.id,
+              staticClass: "p-4 border-b-2 border-indigo-400 cursor-pointer",
+              on: {
+                click: function ($event) {
+                  $event.preventDefault()
+                  return _vm.updateSelectedAppointment(appointment)
+                },
+              },
+            },
+            [
+              _c(
+                "h2",
+                {
+                  staticClass: "inline",
+                  class: { "font-bold": appointment.id == _vm.selected.id },
+                },
+                [_vm._v(_vm._s(appointment.shop.name))]
+              ),
+              _vm._v(" "),
+              _c("span", [
+                _vm._v("- " + _vm._s(_vm.filterDate(appointment.datetime))),
+              ]),
+            ]
+          )
+        }),
+        0
+      )
+    : _vm._e()
 }
 var staticRenderFns = []
 render._withStripped = true
@@ -32687,7 +36498,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -32696,23 +36507,23 @@ var render = function() {
     scopedSlots: _vm._u([
       {
         key: "title",
-        fn: function() {
+        fn: function () {
           return [_vm._v("\n        Shop Information\n    ")]
         },
-        proxy: true
+        proxy: true,
       },
       {
         key: "description",
-        fn: function() {
+        fn: function () {
           return [
-            _vm._v("\n        Update your shops's basic information.\n    ")
+            _vm._v("\n        Update your shops's basic information.\n    "),
           ]
         },
-        proxy: true
+        proxy: true,
       },
       {
         key: "form",
-        fn: function() {
+        fn: function () {
           return [
             _c(
               "div",
@@ -32725,17 +36536,17 @@ var render = function() {
                   attrs: { id: "name", type: "text", autocomplete: "name" },
                   model: {
                     value: _vm.form.name,
-                    callback: function($$v) {
+                    callback: function ($$v) {
                       _vm.$set(_vm.form, "name", $$v)
                     },
-                    expression: "form.name"
-                  }
+                    expression: "form.name",
+                  },
                 }),
                 _vm._v(" "),
                 _c("jet-input-error", {
                   staticClass: "mt-2",
-                  attrs: { message: _vm.form.errors.name }
-                })
+                  attrs: { message: _vm.form.errors.name },
+                }),
               ],
               1
             ),
@@ -32745,7 +36556,7 @@ var render = function() {
               { staticClass: "col-span-6 sm:col-span-4" },
               [
                 _c("jet-label", {
-                  attrs: { for: "description", value: "Description" }
+                  attrs: { for: "description", value: "Description" },
                 }),
                 _vm._v(" "),
                 _c("jet-textarea", {
@@ -32753,33 +36564,33 @@ var render = function() {
                   attrs: { id: "description", type: "description" },
                   model: {
                     value: _vm.form.description,
-                    callback: function($$v) {
+                    callback: function ($$v) {
                       _vm.$set(_vm.form, "description", $$v)
                     },
-                    expression: "form.description"
-                  }
+                    expression: "form.description",
+                  },
                 }),
                 _vm._v(" "),
                 _c("jet-input-error", {
                   staticClass: "mt-2",
-                  attrs: { message: _vm.form.errors.description }
-                })
+                  attrs: { message: _vm.form.errors.description },
+                }),
               ],
               1
-            )
+            ),
           ]
         },
-        proxy: true
+        proxy: true,
       },
       {
         key: "actions",
-        fn: function() {
+        fn: function () {
           return [
             _c(
               "jet-action-message",
               {
                 staticClass: "mr-3",
-                attrs: { on: _vm.form.recentlySuccessful }
+                attrs: { on: _vm.form.recentlySuccessful },
               },
               [_vm._v("\n            Saved.\n        ")]
             ),
@@ -32788,15 +36599,15 @@ var render = function() {
               "jet-button",
               {
                 class: { "opacity-25": _vm.form.processing },
-                attrs: { disabled: _vm.form.processing }
+                attrs: { disabled: _vm.form.processing },
               },
               [_vm._v("\n            Save\n        ")]
-            )
+            ),
           ]
         },
-        proxy: true
-      }
-    ])
+        proxy: true,
+      },
+    ]),
   })
 }
 var staticRenderFns = []
@@ -32818,7 +36629,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -32826,21 +36637,21 @@ var render = function() {
     scopedSlots: _vm._u([
       {
         key: "title",
-        fn: function() {
+        fn: function () {
           return [_vm._v("\n        Shop Location\n    ")]
         },
-        proxy: true
+        proxy: true,
       },
       {
         key: "description",
-        fn: function() {
+        fn: function () {
           return [_vm._v("\n        Update your shops's location.\n    ")]
         },
-        proxy: true
+        proxy: true,
       },
       {
         key: "form",
-        fn: function() {
+        fn: function () {
           return [
             _c(
               "div",
@@ -32854,7 +36665,7 @@ var render = function() {
                     attrs: {
                       center: {
                         lat: parseInt(_vm.form.lat),
-                        lng: parseInt(_vm.form.lng)
+                        lng: parseInt(_vm.form.lng),
                       },
                       zoom: 10,
                       options: {
@@ -32864,9 +36675,9 @@ var render = function() {
                         streetViewControl: false,
                         rotateControl: false,
                         fullscreenControl: false,
-                        disableDefaultUi: true
-                      }
-                    }
+                        disableDefaultUi: true,
+                      },
+                    },
                   },
                   [
                     _c("GmapMarker", {
@@ -32879,29 +36690,29 @@ var render = function() {
                           new _vm.google.maps.LatLng(
                             parseInt(_vm.form.lat),
                             parseInt(_vm.form.lng)
-                          )
+                          ),
                       },
-                      on: { dragend: _vm.updateMarker }
-                    })
+                      on: { dragend: _vm.updateMarker },
+                    }),
                   ],
                   1
-                )
+                ),
               ],
               1
-            )
+            ),
           ]
         },
-        proxy: true
+        proxy: true,
       },
       {
         key: "actions",
-        fn: function() {
+        fn: function () {
           return [
             _c(
               "jet-action-message",
               {
                 staticClass: "mr-3",
-                attrs: { on: _vm.form.recentlySuccessful }
+                attrs: { on: _vm.form.recentlySuccessful },
               },
               [_vm._v("\n            Updated.\n        ")]
             ),
@@ -32910,15 +36721,15 @@ var render = function() {
               "jet-button",
               {
                 class: { "opacity-25": _vm.form.processing },
-                attrs: { disabled: _vm.form.processing }
+                attrs: { disabled: _vm.form.processing },
               },
               [_vm._v("\n            Update\n        ")]
-            )
+            ),
           ]
         },
-        proxy: true
-      }
-    ])
+        proxy: true,
+      },
+    ]),
   })
 }
 var staticRenderFns = []
@@ -32940,7 +36751,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -32949,12 +36760,12 @@ var render = function() {
       "div",
       { staticClass: "grid grid-cols-2 gap-4" },
       [
-        _vm._l(_vm.$page.props.shops, function(shop) {
+        _vm._l(_vm.$page.props.shops, function (shop) {
           return [_c("single-shop", { key: shop.id, attrs: { shop: shop } })]
-        })
+        }),
       ],
       2
-    )
+    ),
   ])
 }
 var staticRenderFns = []
@@ -32976,7 +36787,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -32984,7 +36795,7 @@ var render = function() {
     "div",
     {
       staticClass:
-        "flex flex-col mb-4 bg-white shadow-md rounded-3xl overflow-hidden"
+        "flex flex-col mb-4 bg-white shadow-md rounded-3xl overflow-hidden",
     },
     [
       _c(
@@ -32993,19 +36804,21 @@ var render = function() {
         [
           _c("VueSlickCarousel", [
             _c("img", {
-              attrs: { src: "https://via.placeholder.com/500x250" }
+              attrs: { src: "https://via.placeholder.com/500x250" },
             }),
             _vm._v(" "),
             _c("img", {
-              attrs: { src: "https://via.placeholder.com/500x250" }
+              attrs: { src: "https://via.placeholder.com/500x250" },
             }),
             _vm._v(" "),
             _c("img", {
-              attrs: { src: "https://via.placeholder.com/500x250" }
+              attrs: { src: "https://via.placeholder.com/500x250" },
             }),
             _vm._v(" "),
-            _c("img", { attrs: { src: "https://via.placeholder.com/500x250" } })
-          ])
+            _c("img", {
+              attrs: { src: "https://via.placeholder.com/500x250" },
+            }),
+          ]),
         ],
         1
       ),
@@ -33013,49 +36826,58 @@ var render = function() {
       _c("div", { staticClass: "p-4" }, [
         _c("div", { staticClass: "flex flex-row justify-between" }, [
           _c("h1", { staticClass: "text-xl text-indigo-400 font-bold" }, [
-            _vm._v(_vm._s(_vm.shop.name))
-          ])
+            _vm._v(_vm._s(_vm.shop.name)),
+          ]),
         ]),
         _vm._v(" "),
         _vm.shop.description
           ? _c("p", [
               _vm._v(
                 "\n            " + _vm._s(_vm.shop.description) + "\n        "
-              )
+              ),
             ])
           : _vm._e(),
         _vm._v(" "),
-        _c("div", { staticClass: "flex justify-between" }, [
-          _c(
-            "button",
-            {
-              staticClass:
-                "mt-4 py-2 px-4 border border-transparent shadow-sm text-sm rounded-md font-bold text-white bg-indigo-400 hover:bg-indigo-700"
-            },
-            [_vm._v("\n                Reserve\n            ")]
-          ),
-          _vm._v(" "),
-          _c(
-            "a",
-            {
-              attrs: {
-                href:
-                  "https://www.google.com/maps/dir/?api=1&destination=" +
-                  _vm.shop.lat +
-                  "," +
-                  _vm.shop.lng,
-                target: "_blank"
-              }
-            },
-            [_vm._m(0)]
-          )
-        ])
-      ])
+        _c(
+          "div",
+          { staticClass: "flex justify-between" },
+          [
+            _c(
+              "inertia-link",
+              {
+                staticClass:
+                  "mt-4 py-2 px-4 border border-transparent shadow-sm text-sm rounded-md font-bold text-white bg-indigo-400 hover:bg-indigo-700",
+                attrs: {
+                  href: _vm.route("appointments"),
+                  data: { shop: this.shop.id, new: true },
+                },
+              },
+              [_vm._v("\n                Reserve\n            ")]
+            ),
+            _vm._v(" "),
+            _c(
+              "a",
+              {
+                attrs: {
+                  href:
+                    "https://www.google.com/maps/dir/?api=1&destination=" +
+                    _vm.shop.lat +
+                    "," +
+                    _vm.shop.lng,
+                  target: "_blank",
+                },
+              },
+              [_vm._m(0)]
+            ),
+          ],
+          1
+        ),
+      ]),
     ]
   )
 }
 var staticRenderFns = [
-  function() {
+  function () {
     var _vm = this
     var _h = _vm.$createElement
     var _c = _vm._self._c || _h
@@ -33063,14 +36885,14 @@ var staticRenderFns = [
       "button",
       {
         staticClass:
-          "mt-4 py-2 px-4 border border-transparent shadow-sm text-sm rounded-md font-bold text-white bg-indigo-400 hover:bg-indigo-700"
+          "mt-4 py-2 px-4 border border-transparent shadow-sm text-sm rounded-md font-bold text-white bg-indigo-400 hover:bg-indigo-700",
       },
       [
         _vm._v("\n                    Directions "),
-        _c("i", { staticClass: "fas fa-directions ml-2" })
+        _c("i", { staticClass: "fas fa-directions ml-2" }),
       ]
     )
-  }
+  },
 ]
 render._withStripped = true
 
@@ -33090,7 +36912,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -33103,8 +36925,8 @@ var render = function() {
           attrs: {
             "leave-active-class": "transition ease-in duration-1000",
             "leave-class": "opacity-100",
-            "leave-to-class": "opacity-0"
-          }
+            "leave-to-class": "opacity-0",
+          },
         },
         [
           _c(
@@ -33115,16 +36937,16 @@ var render = function() {
                   name: "show",
                   rawName: "v-show",
                   value: _vm.on,
-                  expression: "on"
-                }
+                  expression: "on",
+                },
               ],
-              staticClass: "text-sm text-gray-600"
+              staticClass: "text-sm text-gray-600",
             },
             [_vm._t("default")],
             2
-          )
+          ),
         ]
-      )
+      ),
     ],
     1
   )
@@ -33148,7 +36970,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -33161,22 +36983,22 @@ var render = function() {
           [
             {
               key: "title",
-              fn: function() {
+              fn: function () {
                 return [_vm._t("title")]
               },
-              proxy: true
+              proxy: true,
             },
             {
               key: "description",
-              fn: function() {
+              fn: function () {
                 return [_vm._t("description")]
               },
-              proxy: true
-            }
+              proxy: true,
+            },
           ],
           null,
           true
-        )
+        ),
       }),
       _vm._v(" "),
       _c("div", { staticClass: "mt-5 md:mt-0 md:col-span-2" }, [
@@ -33185,8 +37007,8 @@ var render = function() {
           { staticClass: "px-4 py-5 sm:p-6 bg-white shadow sm:rounded-lg" },
           [_vm._t("content")],
           2
-        )
-      ])
+        ),
+      ]),
     ],
     1
   )
@@ -33210,7 +37032,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -33220,25 +37042,23 @@ var render = function() {
       attrs: {
         viewBox: "0 0 48 48",
         fill: "none",
-        xmlns: "http://www.w3.org/2000/svg"
-      }
+        xmlns: "http://www.w3.org/2000/svg",
+      },
     },
     [
       _c("path", {
         attrs: {
-          d:
-            "M11.395 44.428C4.557 40.198 0 32.632 0 24 0 10.745 10.745 0 24 0a23.891 23.891 0 0113.997 4.502c-.2 17.907-11.097 33.245-26.602 39.926z",
-          fill: "#6875F5"
-        }
+          d: "M11.395 44.428C4.557 40.198 0 32.632 0 24 0 10.745 10.745 0 24 0a23.891 23.891 0 0113.997 4.502c-.2 17.907-11.097 33.245-26.602 39.926z",
+          fill: "#6875F5",
+        },
       }),
       _vm._v(" "),
       _c("path", {
         attrs: {
-          d:
-            "M14.134 45.885A23.914 23.914 0 0024 48c13.255 0 24-10.745 24-24 0-3.516-.756-6.856-2.115-9.866-4.659 15.143-16.608 27.092-31.75 31.751z",
-          fill: "#6875F5"
-        }
-      })
+          d: "M14.134 45.885A23.914 23.914 0 0024 48c13.255 0 24-10.745 24-24 0-3.516-.756-6.856-2.115-9.866-4.659 15.143-16.608 27.092-31.75 31.751z",
+          fill: "#6875F5",
+        },
+      }),
     ]
   )
 }
@@ -33261,7 +37081,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -33269,7 +37089,7 @@ var render = function() {
     "div",
     {
       staticClass:
-        "min-h-screen flex flex-col sm:justify-center items-center pt-6 sm:pt-0 bg-gray-100"
+        "min-h-screen flex flex-col sm:justify-center items-center pt-6 sm:pt-0 bg-gray-100",
     },
     [
       _c("div", [_vm._t("logo")], 2),
@@ -33278,11 +37098,11 @@ var render = function() {
         "div",
         {
           staticClass:
-            "w-full sm:max-w-md mt-6 px-6 py-4 bg-white shadow-md overflow-hidden sm:rounded-lg"
+            "w-full sm:max-w-md mt-6 px-6 py-4 bg-white shadow-md overflow-hidden sm:rounded-lg",
         },
         [_vm._t("default")],
         2
-      )
+      ),
     ]
   )
 }
@@ -33305,7 +37125,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -33317,27 +37137,25 @@ var render = function() {
         attrs: {
           viewBox: "0 0 48 48",
           fill: "none",
-          xmlns: "http://www.w3.org/2000/svg"
-        }
+          xmlns: "http://www.w3.org/2000/svg",
+        },
       },
       [
         _c("path", {
           attrs: {
-            d:
-              "M11.395 44.428C4.557 40.198 0 32.632 0 24 0 10.745 10.745 0 24 0a23.891 23.891 0 0113.997 4.502c-.2 17.907-11.097 33.245-26.602 39.926z",
-            fill: "#6875F5"
-          }
+            d: "M11.395 44.428C4.557 40.198 0 32.632 0 24 0 10.745 10.745 0 24 0a23.891 23.891 0 0113.997 4.502c-.2 17.907-11.097 33.245-26.602 39.926z",
+            fill: "#6875F5",
+          },
         }),
         _vm._v(" "),
         _c("path", {
           attrs: {
-            d:
-              "M14.134 45.885A23.914 23.914 0 0024 48c13.255 0 24-10.745 24-24 0-3.516-.756-6.856-2.115-9.866-4.659 15.143-16.608 27.092-31.75 31.751z",
-            fill: "#6875F5"
-          }
-        })
+            d: "M14.134 45.885A23.914 23.914 0 0024 48c13.255 0 24-10.745 24-24 0-3.516-.756-6.856-2.115-9.866-4.659 15.143-16.608 27.092-31.75 31.751z",
+            fill: "#6875F5",
+          },
+        }),
       ]
-    )
+    ),
   ])
 }
 var staticRenderFns = []
@@ -33359,7 +37177,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -33370,20 +37188,21 @@ var render = function() {
           {
             class: {
               "bg-indigo-500": _vm.style == "success",
-              "bg-red-700": _vm.style == "danger"
-            }
+              "bg-red-700": _vm.style == "danger",
+            },
           },
           [
             _c(
               "div",
               {
-                staticClass: "max-w-screen-xl mx-auto py-2 px-3 sm:px-6 lg:px-8"
+                staticClass:
+                  "max-w-screen-xl mx-auto py-2 px-3 sm:px-6 lg:px-8",
               },
               [
                 _c(
                   "div",
                   {
-                    staticClass: "flex items-center justify-between flex-wrap"
+                    staticClass: "flex items-center justify-between flex-wrap",
                   },
                   [
                     _c(
@@ -33396,8 +37215,8 @@ var render = function() {
                             staticClass: "flex p-2 rounded-lg",
                             class: {
                               "bg-indigo-600": _vm.style == "success",
-                              "bg-red-600": _vm.style == "danger"
-                            }
+                              "bg-red-600": _vm.style == "danger",
+                            },
                           },
                           [
                             _vm.style == "success"
@@ -33409,8 +37228,8 @@ var render = function() {
                                       xmlns: "http://www.w3.org/2000/svg",
                                       fill: "none",
                                       viewBox: "0 0 24 24",
-                                      stroke: "currentColor"
-                                    }
+                                      stroke: "currentColor",
+                                    },
                                   },
                                   [
                                     _c("path", {
@@ -33418,10 +37237,9 @@ var render = function() {
                                         "stroke-linecap": "round",
                                         "stroke-linejoin": "round",
                                         "stroke-width": "2",
-                                        d:
-                                          "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                                      }
-                                    })
+                                        d: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z",
+                                      },
+                                    }),
                                   ]
                                 )
                               : _vm._e(),
@@ -33435,8 +37253,8 @@ var render = function() {
                                       xmlns: "http://www.w3.org/2000/svg",
                                       fill: "none",
                                       viewBox: "0 0 24 24",
-                                      stroke: "currentColor"
-                                    }
+                                      stroke: "currentColor",
+                                    },
                                   },
                                   [
                                     _c("path", {
@@ -33444,13 +37262,12 @@ var render = function() {
                                         "stroke-linecap": "round",
                                         "stroke-linejoin": "round",
                                         "stroke-width": "2",
-                                        d:
-                                          "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                                      }
-                                    })
+                                        d: "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z",
+                                      },
+                                    }),
                                   ]
                                 )
-                              : _vm._e()
+                              : _vm._e(),
                           ]
                         ),
                         _vm._v(" "),
@@ -33458,16 +37275,16 @@ var render = function() {
                           "p",
                           {
                             staticClass:
-                              "ml-3 font-medium text-sm text-white truncate"
+                              "ml-3 font-medium text-sm text-white truncate",
                           },
                           [
                             _vm._v(
                               "\n                        " +
                                 _vm._s(_vm.message) +
                                 "\n                    "
-                            )
+                            ),
                           ]
-                        )
+                        ),
                       ]
                     ),
                     _vm._v(" "),
@@ -33481,15 +37298,15 @@ var render = function() {
                             "hover:bg-indigo-600 focus:bg-indigo-600":
                               _vm.style == "success",
                             "hover:bg-red-600 focus:bg-red-600":
-                              _vm.style == "danger"
+                              _vm.style == "danger",
                           },
                           attrs: { type: "button", "aria-label": "Dismiss" },
                           on: {
-                            click: function($event) {
+                            click: function ($event) {
                               $event.preventDefault()
                               _vm.show = false
-                            }
-                          }
+                            },
+                          },
                         },
                         [
                           _c(
@@ -33500,8 +37317,8 @@ var render = function() {
                                 xmlns: "http://www.w3.org/2000/svg",
                                 fill: "none",
                                 viewBox: "0 0 24 24",
-                                stroke: "currentColor"
-                              }
+                                stroke: "currentColor",
+                              },
                             },
                             [
                               _c("path", {
@@ -33509,21 +37326,21 @@ var render = function() {
                                   "stroke-linecap": "round",
                                   "stroke-linejoin": "round",
                                   "stroke-width": "2",
-                                  d: "M6 18L18 6M6 6l12 12"
-                                }
-                              })
+                                  d: "M6 18L18 6M6 6l12 12",
+                                },
+                              }),
                             ]
-                          )
+                          ),
                         ]
-                      )
-                    ])
+                      ),
+                    ]),
                   ]
-                )
+                ),
               ]
-            )
+            ),
           ]
         )
-      : _vm._e()
+      : _vm._e(),
   ])
 }
 var staticRenderFns = []
@@ -33545,7 +37362,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -33554,7 +37371,7 @@ var render = function() {
     {
       staticClass:
         "inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 active:bg-gray-900 focus:outline-none focus:border-gray-900 focus:shadow-outline-gray transition ease-in-out duration-150",
-      attrs: { type: _vm.type }
+      attrs: { type: _vm.type },
     },
     [_vm._t("default")],
     2
@@ -33579,7 +37396,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -33589,8 +37406,8 @@ var render = function() {
         name: "model",
         rawName: "v-model",
         value: _vm.proxyChecked,
-        expression: "proxyChecked"
-      }
+        expression: "proxyChecked",
+      },
     ],
     staticClass:
       "rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50",
@@ -33599,10 +37416,10 @@ var render = function() {
       value: _vm.value,
       checked: Array.isArray(_vm.proxyChecked)
         ? _vm._i(_vm.proxyChecked, _vm.value) > -1
-        : _vm.proxyChecked
+        : _vm.proxyChecked,
     },
     on: {
-      change: function($event) {
+      change: function ($event) {
         var $$a = _vm.proxyChecked,
           $$el = $event.target,
           $$c = $$el.checked ? true : false
@@ -33618,8 +37435,8 @@ var render = function() {
         } else {
           _vm.proxyChecked = $$c
         }
-      }
-    }
+      },
+    },
   })
 }
 var staticRenderFns = []
@@ -33641,7 +37458,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -33651,9 +37468,9 @@ var render = function() {
       attrs: {
         show: _vm.show,
         "max-width": _vm.maxWidth,
-        closeable: _vm.closeable
+        closeable: _vm.closeable,
       },
-      on: { close: _vm.close }
+      on: { close: _vm.close },
     },
     [
       _c("div", { staticClass: "bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4" }, [
@@ -33662,7 +37479,7 @@ var render = function() {
             "div",
             {
               staticClass:
-                "mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10"
+                "mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10",
             },
             [
               _c(
@@ -33672,8 +37489,8 @@ var render = function() {
                   attrs: {
                     stroke: "currentColor",
                     fill: "none",
-                    viewBox: "0 0 24 24"
-                  }
+                    viewBox: "0 0 24 24",
+                  },
                 },
                 [
                   _c("path", {
@@ -33681,12 +37498,11 @@ var render = function() {
                       "stroke-linecap": "round",
                       "stroke-linejoin": "round",
                       "stroke-width": "2",
-                      d:
-                        "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                    }
-                  })
+                      d: "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z",
+                    },
+                  }),
                 ]
-              )
+              ),
             ]
           ),
           _vm._v(" "),
@@ -33696,10 +37512,10 @@ var render = function() {
             [
               _c("h3", { staticClass: "text-lg" }, [_vm._t("title")], 2),
               _vm._v(" "),
-              _c("div", { staticClass: "mt-2" }, [_vm._t("content")], 2)
+              _c("div", { staticClass: "mt-2" }, [_vm._t("content")], 2),
             ]
-          )
-        ])
+          ),
+        ]),
       ]),
       _vm._v(" "),
       _c(
@@ -33707,7 +37523,7 @@ var render = function() {
         { staticClass: "px-6 py-4 bg-gray-100 text-right" },
         [_vm._t("footer")],
         2
-      )
+      ),
     ]
   )
 }
@@ -33730,7 +37546,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -33750,16 +37566,16 @@ var render = function() {
         scopedSlots: _vm._u([
           {
             key: "title",
-            fn: function() {
+            fn: function () {
               return [
-                _vm._v("\n            " + _vm._s(_vm.title) + "\n        ")
+                _vm._v("\n            " + _vm._s(_vm.title) + "\n        "),
               ]
             },
-            proxy: true
+            proxy: true,
           },
           {
             key: "content",
-            fn: function() {
+            fn: function () {
               return [
                 _vm._v(
                   "\n            " + _vm._s(_vm.content) + "\n\n            "
@@ -33773,7 +37589,7 @@ var render = function() {
                       staticClass: "mt-1 block w-3/4",
                       attrs: { type: "password", placeholder: "Password" },
                       nativeOn: {
-                        keyup: function($event) {
+                        keyup: function ($event) {
                           if (
                             !$event.type.indexOf("key") &&
                             _vm._k(
@@ -33787,40 +37603,40 @@ var render = function() {
                             return null
                           }
                           return _vm.confirmPassword.apply(null, arguments)
-                        }
+                        },
                       },
                       model: {
                         value: _vm.form.password,
-                        callback: function($$v) {
+                        callback: function ($$v) {
                           _vm.$set(_vm.form, "password", $$v)
                         },
-                        expression: "form.password"
-                      }
+                        expression: "form.password",
+                      },
                     }),
                     _vm._v(" "),
                     _c("jet-input-error", {
                       staticClass: "mt-2",
-                      attrs: { message: _vm.form.error }
-                    })
+                      attrs: { message: _vm.form.error },
+                    }),
                   ],
                   1
-                )
+                ),
               ]
             },
-            proxy: true
+            proxy: true,
           },
           {
             key: "footer",
-            fn: function() {
+            fn: function () {
               return [
                 _c(
                   "jet-secondary-button",
                   {
                     nativeOn: {
-                      click: function($event) {
+                      click: function ($event) {
                         return _vm.closeModal.apply(null, arguments)
-                      }
-                    }
+                      },
+                    },
                   },
                   [_vm._v("\n                Nevermind\n            ")]
                 ),
@@ -33832,25 +37648,25 @@ var render = function() {
                     class: { "opacity-25": _vm.form.processing },
                     attrs: { disabled: _vm.form.processing },
                     nativeOn: {
-                      click: function($event) {
+                      click: function ($event) {
                         return _vm.confirmPassword.apply(null, arguments)
-                      }
-                    }
+                      },
+                    },
                   },
                   [
                     _vm._v(
                       "\n                " +
                         _vm._s(_vm.button) +
                         "\n            "
-                    )
+                    ),
                   ]
-                )
+                ),
               ]
             },
-            proxy: true
-          }
-        ])
-      })
+            proxy: true,
+          },
+        ]),
+      }),
     ],
     1
   )
@@ -33874,7 +37690,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -33883,7 +37699,7 @@ var render = function() {
     {
       staticClass:
         "inline-flex items-center justify-center px-4 py-2 bg-red-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-500 focus:outline-none focus:border-red-700 focus:shadow-outline-red active:bg-red-600 transition ease-in-out duration-150",
-      attrs: { type: _vm.type }
+      attrs: { type: _vm.type },
     },
     [_vm._t("default")],
     2
@@ -33908,7 +37724,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -33918,15 +37734,15 @@ var render = function() {
       attrs: {
         show: _vm.show,
         "max-width": _vm.maxWidth,
-        closeable: _vm.closeable
+        closeable: _vm.closeable,
       },
-      on: { close: _vm.close }
+      on: { close: _vm.close },
     },
     [
       _c("div", { staticClass: "px-6 py-4" }, [
         _c("div", { staticClass: "text-lg" }, [_vm._t("title")], 2),
         _vm._v(" "),
-        _c("div", { staticClass: "mt-4" }, [_vm._t("content")], 2)
+        _c("div", { staticClass: "mt-4" }, [_vm._t("content")], 2),
       ]),
       _vm._v(" "),
       _c(
@@ -33934,7 +37750,7 @@ var render = function() {
         { staticClass: "px-6 py-4 bg-gray-100 text-right" },
         [_vm._t("footer")],
         2
-      )
+      ),
     ]
   )
 }
@@ -33957,7 +37773,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -33969,10 +37785,10 @@ var render = function() {
         "div",
         {
           on: {
-            click: function($event) {
+            click: function ($event) {
               _vm.open = !_vm.open
-            }
-          }
+            },
+          },
         },
         [_vm._t("trigger")],
         2
@@ -33984,15 +37800,15 @@ var render = function() {
             name: "show",
             rawName: "v-show",
             value: _vm.open,
-            expression: "open"
-          }
+            expression: "open",
+          },
         ],
         staticClass: "fixed inset-0 z-40",
         on: {
-          click: function($event) {
+          click: function ($event) {
             _vm.open = false
-          }
-        }
+          },
+        },
       }),
       _vm._v(" "),
       _c(
@@ -34004,8 +37820,8 @@ var render = function() {
             "enter-to-class": "transform opacity-100 scale-100",
             "leave-active-class": "transition ease-in duration-75",
             "leave-class": "transform opacity-100 scale-100",
-            "leave-to-class": "transform opacity-0 scale-95"
-          }
+            "leave-to-class": "transform opacity-0 scale-95",
+          },
         },
         [
           _c(
@@ -34016,32 +37832,32 @@ var render = function() {
                   name: "show",
                   rawName: "v-show",
                   value: _vm.open,
-                  expression: "open"
-                }
+                  expression: "open",
+                },
               ],
               staticClass: "absolute z-50 mt-2 rounded-md shadow-lg",
               class: [_vm.widthClass, _vm.alignmentClasses],
               staticStyle: { display: "none" },
               on: {
-                click: function($event) {
+                click: function ($event) {
                   _vm.open = false
-                }
-              }
+                },
+              },
             },
             [
               _c(
                 "div",
                 {
                   staticClass: "rounded-md ring-1 ring-black ring-opacity-5",
-                  class: _vm.contentClasses
+                  class: _vm.contentClasses,
                 },
                 [_vm._t("content")],
                 2
-              )
+              ),
             ]
-          )
+          ),
         ]
-      )
+      ),
     ],
     1
   )
@@ -34065,7 +37881,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -34078,7 +37894,7 @@ var render = function() {
             {
               staticClass:
                 "block w-full px-4 py-2 text-sm leading-5 text-gray-700 text-left hover:bg-gray-100 focus:outline-none focus:bg-gray-100 transition duration-150 ease-in-out",
-              attrs: { type: "submit" }
+              attrs: { type: "submit" },
             },
             [_vm._t("default")],
             2
@@ -34088,11 +37904,11 @@ var render = function() {
             {
               staticClass:
                 "block px-4 py-2 text-sm leading-5 text-gray-700 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 transition duration-150 ease-in-out",
-              attrs: { href: _vm.href }
+              attrs: { href: _vm.href },
             },
             [_vm._t("default")],
             2
-          )
+          ),
     ],
     1
   )
@@ -34116,7 +37932,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -34129,22 +37945,22 @@ var render = function() {
           [
             {
               key: "title",
-              fn: function() {
+              fn: function () {
                 return [_vm._t("title")]
               },
-              proxy: true
+              proxy: true,
             },
             {
               key: "description",
-              fn: function() {
+              fn: function () {
                 return [_vm._t("description")]
               },
-              proxy: true
-            }
+              proxy: true,
+            },
           ],
           null,
           true
-        )
+        ),
       }),
       _vm._v(" "),
       _c("div", { staticClass: "mt-5 md:mt-0 md:col-span-2" }, [
@@ -34152,11 +37968,11 @@ var render = function() {
           "form",
           {
             on: {
-              submit: function($event) {
+              submit: function ($event) {
                 $event.preventDefault()
                 return _vm.$emit("submitted")
-              }
-            }
+              },
+            },
           },
           [
             _c("div", { staticClass: "shadow overflow-hidden sm:rounded-md" }, [
@@ -34166,7 +37982,7 @@ var render = function() {
                   { staticClass: "grid grid-cols-6 gap-6" },
                   [_vm._t("form")],
                   2
-                )
+                ),
               ]),
               _vm._v(" "),
               _vm.hasActions
@@ -34174,16 +37990,16 @@ var render = function() {
                     "div",
                     {
                       staticClass:
-                        "flex items-center justify-end px-4 py-3 bg-gray-50 text-right sm:px-6"
+                        "flex items-center justify-end px-4 py-3 bg-gray-50 text-right sm:px-6",
                     },
                     [_vm._t("actions")],
                     2
                   )
-                : _vm._e()
-            ])
+                : _vm._e(),
+            ]),
           ]
-        )
-      ])
+        ),
+      ]),
     ],
     1
   )
@@ -34207,7 +38023,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -34217,10 +38033,10 @@ var render = function() {
       "border-gray-300 focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 rounded-md shadow-sm",
     domProps: { value: _vm.value },
     on: {
-      input: function($event) {
+      input: function ($event) {
         return _vm.$emit("input", $event.target.value)
-      }
-    }
+      },
+    },
   })
 }
 var staticRenderFns = []
@@ -34242,7 +38058,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -34254,14 +38070,14 @@ var render = function() {
           name: "show",
           rawName: "v-show",
           value: _vm.message,
-          expression: "message"
-        }
-      ]
+          expression: "message",
+        },
+      ],
     },
     [
       _c("p", { staticClass: "text-sm text-red-600" }, [
-        _vm._v("\n        " + _vm._s(_vm.message) + "\n    ")
-      ])
+        _vm._v("\n        " + _vm._s(_vm.message) + "\n    "),
+      ]),
     ]
   )
 }
@@ -34284,7 +38100,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -34294,7 +38110,7 @@ var render = function() {
     [
       _vm.value
         ? _c("span", [_vm._v(_vm._s(_vm.value))])
-        : _c("span", [_vm._t("default")], 2)
+        : _c("span", [_vm._t("default")], 2),
     ]
   )
 }
@@ -34317,7 +38133,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -34334,10 +38150,10 @@ var render = function() {
                 name: "show",
                 rawName: "v-show",
                 value: _vm.show,
-                expression: "show"
-              }
+                expression: "show",
+              },
             ],
-            staticClass: "fixed inset-0 overflow-y-auto px-4 py-6 sm:px-0 z-50"
+            staticClass: "fixed inset-0 overflow-y-auto px-4 py-6 sm:px-0 z-50",
           },
           [
             _c(
@@ -34349,8 +38165,8 @@ var render = function() {
                   "enter-to-class": "opacity-100",
                   "leave-active-class": "ease-in duration-200",
                   "leave-class": "opacity-100",
-                  "leave-to-class": "opacity-0"
-                }
+                  "leave-to-class": "opacity-0",
+                },
               },
               [
                 _c(
@@ -34361,18 +38177,18 @@ var render = function() {
                         name: "show",
                         rawName: "v-show",
                         value: _vm.show,
-                        expression: "show"
-                      }
+                        expression: "show",
+                      },
                     ],
                     staticClass: "fixed inset-0 transform transition-all",
-                    on: { click: _vm.close }
+                    on: { click: _vm.close },
                   },
                   [
                     _c("div", {
-                      staticClass: "absolute inset-0 bg-gray-500 opacity-75"
-                    })
+                      staticClass: "absolute inset-0 bg-gray-500 opacity-75",
+                    }),
                   ]
-                )
+                ),
               ]
             ),
             _vm._v(" "),
@@ -34387,8 +38203,8 @@ var render = function() {
                   "leave-active-class": "ease-in duration-200",
                   "leave-class": "opacity-100 translate-y-0 sm:scale-100",
                   "leave-to-class":
-                    "opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-                }
+                    "opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95",
+                },
               },
               [
                 _c(
@@ -34399,22 +38215,22 @@ var render = function() {
                         name: "show",
                         rawName: "v-show",
                         value: _vm.show,
-                        expression: "show"
-                      }
+                        expression: "show",
+                      },
                     ],
                     staticClass:
                       "mb-6 bg-white rounded-lg overflow-hidden shadow-xl transform transition-all sm:w-full sm:mx-auto",
-                    class: _vm.maxWidthClass
+                    class: _vm.maxWidthClass,
                   },
                   [_vm._t("default")],
                   2
-                )
+                ),
               ]
-            )
+            ),
           ],
           1
-        )
-      ])
+        ),
+      ]),
     ],
     1
   )
@@ -34438,7 +38254,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -34468,7 +38284,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -34487,7 +38303,7 @@ var render = function() {
             { class: _vm.classes, attrs: { href: _vm.href } },
             [_vm._t("default")],
             2
-          )
+          ),
     ],
     1
   )
@@ -34511,7 +38327,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -34520,7 +38336,7 @@ var render = function() {
     {
       staticClass:
         "inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest shadow-sm hover:text-gray-500 focus:outline-none focus:border-blue-300 focus:shadow-outline-blue active:text-gray-800 active:bg-gray-50 transition ease-in-out duration-150",
-      attrs: { type: _vm.type }
+      attrs: { type: _vm.type },
     },
     [_vm._t("default")],
     2
@@ -34545,23 +38361,23 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
   return _vm._m(0)
 }
 var staticRenderFns = [
-  function() {
+  function () {
     var _vm = this
     var _h = _vm.$createElement
     var _c = _vm._self._c || _h
     return _c("div", { staticClass: "hidden sm:block" }, [
       _c("div", { staticClass: "py-8" }, [
-        _c("div", { staticClass: "border-t border-gray-200" })
-      ])
+        _c("div", { staticClass: "border-t border-gray-200" }),
+      ]),
     ])
-  }
+  },
 ]
 render._withStripped = true
 
@@ -34581,7 +38397,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -34599,8 +38415,8 @@ var render = function() {
         { staticClass: "mt-1 text-sm text-gray-600" },
         [_vm._t("description")],
         2
-      )
-    ])
+      ),
+    ]),
   ])
 }
 var staticRenderFns = []
@@ -34622,7 +38438,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -34633,10 +38449,10 @@ var render = function() {
     attrs: { rows: "4" },
     domProps: { value: _vm.value },
     on: {
-      input: function($event) {
+      input: function ($event) {
         return _vm.$emit("input", $event.target.value)
-      }
-    }
+      },
+    },
   })
 }
 var staticRenderFns = []
@@ -34658,24 +38474,24 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
   return _vm.hasErrors
     ? _c("div", [
         _c("div", { staticClass: "font-medium text-red-600" }, [
-          _vm._v("Whoops! Something went wrong.")
+          _vm._v("Whoops! Something went wrong."),
         ]),
         _vm._v(" "),
         _c(
           "ul",
           { staticClass: "mt-3 list-disc list-inside text-sm text-red-600" },
-          _vm._l(_vm.errors, function(error, key) {
+          _vm._l(_vm.errors, function (error, key) {
             return _c("li", { key: key }, [_vm._v(_vm._s(error))])
           }),
           0
-        )
+        ),
       ])
     : _vm._e()
 }
@@ -34698,7 +38514,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -34727,11 +38543,11 @@ var render = function() {
                           { attrs: { href: _vm.route("home") } },
                           [
                             _c("jet-application-mark", {
-                              staticClass: "block h-9 w-auto"
-                            })
+                              staticClass: "block h-9 w-auto",
+                            }),
                           ],
                           1
-                        )
+                        ),
                       ],
                       1
                     ),
@@ -34740,7 +38556,7 @@ var render = function() {
                       "div",
                       {
                         staticClass:
-                          "hidden space-x-8 sm:-my-px sm:ml-10 sm:flex"
+                          "hidden space-x-8 sm:-my-px sm:ml-10 sm:flex",
                       },
                       [
                         _c(
@@ -34748,13 +38564,13 @@ var render = function() {
                           {
                             attrs: {
                               href: _vm.route("home"),
-                              active: _vm.route().current("home")
-                            }
+                              active: _vm.route().current("home"),
+                            },
                           },
                           [
                             _vm._v(
                               "\n                                Home\n                            "
-                            )
+                            ),
                           ]
                         ),
                         _vm._v(" "),
@@ -34764,13 +38580,13 @@ var render = function() {
                               {
                                 attrs: {
                                   href: _vm.route("my-shop"),
-                                  active: _vm.route().current("my-shop")
-                                }
+                                  active: _vm.route().current("my-shop"),
+                                },
                               },
                               [
                                 _vm._v(
                                   "\n                                My Shop\n                            "
-                                )
+                                ),
                               ]
                             )
                           : _vm._e(),
@@ -34780,18 +38596,18 @@ var render = function() {
                           {
                             attrs: {
                               href: _vm.route("appointments"),
-                              active: _vm.route().current("appointments")
-                            }
+                              active: _vm.route().current("appointments"),
+                            },
                           },
                           [
                             _vm._v(
                               "\n                                Appointments\n                            "
-                            )
+                            ),
                           ]
-                        )
+                        ),
                       ],
                       1
-                    )
+                    ),
                   ]),
                   _vm._v(" "),
                   _c(
@@ -34809,13 +38625,13 @@ var render = function() {
                                   [
                                     {
                                       key: "trigger",
-                                      fn: function() {
+                                      fn: function () {
                                         return [
                                           _c(
                                             "span",
                                             {
                                               staticClass:
-                                                "inline-flex rounded-md"
+                                                "inline-flex rounded-md",
                                             },
                                             [
                                               _c(
@@ -34823,7 +38639,7 @@ var render = function() {
                                                 {
                                                   staticClass:
                                                     "inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-white hover:bg-gray-50 hover:text-gray-700 focus:outline-none focus:bg-gray-50 active:bg-gray-50 transition ease-in-out duration-150",
-                                                  attrs: { type: "button" }
+                                                  attrs: { type: "button" },
                                                 },
                                                 [
                                                   _vm._v(
@@ -34843,32 +38659,32 @@ var render = function() {
                                                         xmlns:
                                                           "http://www.w3.org/2000/svg",
                                                         viewBox: "0 0 20 20",
-                                                        fill: "currentColor"
-                                                      }
+                                                        fill: "currentColor",
+                                                      },
                                                     },
                                                     [
                                                       _c("path", {
                                                         attrs: {
                                                           "fill-rule":
                                                             "evenodd",
-                                                          d:
-                                                            "M10 3a1 1 0 01.707.293l3 3a1 1 0 01-1.414 1.414L10 5.414 7.707 7.707a1 1 0 01-1.414-1.414l3-3A1 1 0 0110 3zm-3.707 9.293a1 1 0 011.414 0L10 14.586l2.293-2.293a1 1 0 011.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z",
-                                                          "clip-rule": "evenodd"
-                                                        }
-                                                      })
+                                                          d: "M10 3a1 1 0 01.707.293l3 3a1 1 0 01-1.414 1.414L10 5.414 7.707 7.707a1 1 0 01-1.414-1.414l3-3A1 1 0 0110 3zm-3.707 9.293a1 1 0 011.414 0L10 14.586l2.293-2.293a1 1 0 011.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z",
+                                                          "clip-rule":
+                                                            "evenodd",
+                                                        },
+                                                      }),
                                                     ]
-                                                  )
+                                                  ),
                                                 ]
-                                              )
+                                              ),
                                             ]
-                                          )
+                                          ),
                                         ]
                                       },
-                                      proxy: true
+                                      proxy: true,
                                     },
                                     {
                                       key: "content",
-                                      fn: function() {
+                                      fn: function () {
                                         return [
                                           _c(
                                             "div",
@@ -34881,12 +38697,12 @@ var render = function() {
                                                       "div",
                                                       {
                                                         staticClass:
-                                                          "block px-4 py-2 text-xs text-gray-400"
+                                                          "block px-4 py-2 text-xs text-gray-400",
                                                       },
                                                       [
                                                         _vm._v(
                                                           "\n                                                Manage Team\n                                            "
-                                                        )
+                                                        ),
                                                       ]
                                                     ),
                                                     _vm._v(" "),
@@ -34898,13 +38714,13 @@ var render = function() {
                                                             "teams.show",
                                                             _vm.$page.props.user
                                                               .current_team
-                                                          )
-                                                        }
+                                                          ),
+                                                        },
                                                       },
                                                       [
                                                         _vm._v(
                                                           "\n                                                Team Settings\n                                            "
-                                                        )
+                                                        ),
                                                       ]
                                                     ),
                                                     _vm._v(" "),
@@ -34916,69 +38732,70 @@ var render = function() {
                                                             attrs: {
                                                               href: _vm.route(
                                                                 "teams.create"
-                                                              )
-                                                            }
+                                                              ),
+                                                            },
                                                           },
                                                           [
                                                             _vm._v(
                                                               "\n                                                Create New Team\n                                            "
-                                                            )
+                                                            ),
                                                           ]
                                                         )
                                                       : _vm._e(),
                                                     _vm._v(" "),
                                                     _c("div", {
                                                       staticClass:
-                                                        "border-t border-gray-100"
+                                                        "border-t border-gray-100",
                                                     }),
                                                     _vm._v(" "),
                                                     _c(
                                                       "div",
                                                       {
                                                         staticClass:
-                                                          "block px-4 py-2 text-xs text-gray-400"
+                                                          "block px-4 py-2 text-xs text-gray-400",
                                                       },
                                                       [
                                                         _vm._v(
                                                           "\n                                                Switch Teams\n                                            "
-                                                        )
+                                                        ),
                                                       ]
                                                     ),
                                                     _vm._v(" "),
                                                     _vm._l(
                                                       _vm.$page.props.user
                                                         .all_teams,
-                                                      function(team) {
+                                                      function (team) {
                                                         return [
                                                           _c(
                                                             "form",
                                                             {
                                                               key: team.id,
                                                               on: {
-                                                                submit: function(
-                                                                  $event
-                                                                ) {
-                                                                  $event.preventDefault()
-                                                                  return _vm.switchToTeam(
-                                                                    team
-                                                                  )
-                                                                }
-                                                              }
+                                                                submit:
+                                                                  function (
+                                                                    $event
+                                                                  ) {
+                                                                    $event.preventDefault()
+                                                                    return _vm.switchToTeam(
+                                                                      team
+                                                                    )
+                                                                  },
+                                                              },
                                                             },
                                                             [
                                                               _c(
                                                                 "jet-dropdown-link",
                                                                 {
                                                                   attrs: {
-                                                                    as: "button"
-                                                                  }
+                                                                    as: "button",
+                                                                  },
                                                                 },
                                                                 [
                                                                   _c(
                                                                     "div",
                                                                     {
                                                                       staticClass:
-                                                                        "flex items-center"
+                                                                        "flex items-center",
                                                                     },
                                                                     [
                                                                       team.id ==
@@ -34991,31 +38808,31 @@ var render = function() {
                                                                             {
                                                                               staticClass:
                                                                                 "mr-2 h-5 w-5 text-green-400",
-                                                                              attrs: {
-                                                                                fill:
-                                                                                  "none",
-                                                                                "stroke-linecap":
-                                                                                  "round",
-                                                                                "stroke-linejoin":
-                                                                                  "round",
-                                                                                "stroke-width":
-                                                                                  "2",
-                                                                                stroke:
-                                                                                  "currentColor",
-                                                                                viewBox:
-                                                                                  "0 0 24 24"
-                                                                              }
+                                                                              attrs:
+                                                                                {
+                                                                                  fill: "none",
+                                                                                  "stroke-linecap":
+                                                                                    "round",
+                                                                                  "stroke-linejoin":
+                                                                                    "round",
+                                                                                  "stroke-width":
+                                                                                    "2",
+                                                                                  stroke:
+                                                                                    "currentColor",
+                                                                                  viewBox:
+                                                                                    "0 0 24 24",
+                                                                                },
                                                                             },
                                                                             [
                                                                               _c(
                                                                                 "path",
                                                                                 {
-                                                                                  attrs: {
-                                                                                    d:
-                                                                                      "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                                                                                  }
+                                                                                  attrs:
+                                                                                    {
+                                                                                      d: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z",
+                                                                                    },
                                                                                 }
-                                                                              )
+                                                                              ),
                                                                             ]
                                                                           )
                                                                         : _vm._e(),
@@ -35029,35 +38846,35 @@ var render = function() {
                                                                             _vm._s(
                                                                               team.name
                                                                             )
-                                                                          )
+                                                                          ),
                                                                         ]
-                                                                      )
+                                                                      ),
                                                                     ]
-                                                                  )
+                                                                  ),
                                                                 ]
-                                                              )
+                                                              ),
                                                             ],
                                                             1
-                                                          )
+                                                          ),
                                                         ]
                                                       }
-                                                    )
+                                                    ),
                                                   ]
-                                                : _vm._e()
+                                                : _vm._e(),
                                             ],
                                             2
-                                          )
+                                          ),
                                         ]
                                       },
-                                      proxy: true
-                                    }
+                                      proxy: true,
+                                    },
                                   ],
                                   null,
                                   false,
                                   373511154
-                                )
+                                ),
                               })
-                            : _vm._e()
+                            : _vm._e(),
                         ],
                         1
                       ),
@@ -35071,7 +38888,7 @@ var render = function() {
                             scopedSlots: _vm._u([
                               {
                                 key: "trigger",
-                                fn: function() {
+                                fn: function () {
                                   return [
                                     _vm.$page.props.jetstream
                                       .managesProfilePhotos
@@ -35079,26 +38896,25 @@ var render = function() {
                                           "button",
                                           {
                                             staticClass:
-                                              "flex text-sm border-2 border-transparent rounded-full focus:outline-none focus:border-gray-300 transition duration-150 ease-in-out"
+                                              "flex text-sm border-2 border-transparent rounded-full focus:outline-none focus:border-gray-300 transition duration-150 ease-in-out",
                                           },
                                           [
                                             _c("img", {
                                               staticClass:
                                                 "h-8 w-8 rounded-full object-cover",
                                               attrs: {
-                                                src:
-                                                  _vm.$page.props.user
-                                                    .profile_photo_url,
-                                                alt: _vm.$page.props.user.name
-                                              }
-                                            })
+                                                src: _vm.$page.props.user
+                                                  .profile_photo_url,
+                                                alt: _vm.$page.props.user.name,
+                                              },
+                                            }),
                                           ]
                                         )
                                       : _c(
                                           "span",
                                           {
                                             staticClass:
-                                              "inline-flex rounded-md"
+                                              "inline-flex rounded-md",
                                           },
                                           [
                                             _c(
@@ -35106,7 +38922,7 @@ var render = function() {
                                               {
                                                 staticClass:
                                                   "inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-white hover:text-gray-700 focus:outline-none transition ease-in-out duration-150",
-                                                attrs: { type: "button" }
+                                                attrs: { type: "button" },
                                               },
                                               [
                                                 _vm._v(
@@ -35125,42 +38941,41 @@ var render = function() {
                                                       xmlns:
                                                         "http://www.w3.org/2000/svg",
                                                       viewBox: "0 0 20 20",
-                                                      fill: "currentColor"
-                                                    }
+                                                      fill: "currentColor",
+                                                    },
                                                   },
                                                   [
                                                     _c("path", {
                                                       attrs: {
                                                         "fill-rule": "evenodd",
-                                                        d:
-                                                          "M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z",
-                                                        "clip-rule": "evenodd"
-                                                      }
-                                                    })
+                                                        d: "M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z",
+                                                        "clip-rule": "evenodd",
+                                                      },
+                                                    }),
                                                   ]
-                                                )
+                                                ),
                                               ]
-                                            )
+                                            ),
                                           ]
-                                        )
+                                        ),
                                   ]
                                 },
-                                proxy: true
+                                proxy: true,
                               },
                               {
                                 key: "content",
-                                fn: function() {
+                                fn: function () {
                                   return [
                                     _c(
                                       "div",
                                       {
                                         staticClass:
-                                          "block px-4 py-2 text-xs text-gray-400"
+                                          "block px-4 py-2 text-xs text-gray-400",
                                       },
                                       [
                                         _vm._v(
                                           "\n                                        Manage Account\n                                    "
-                                        )
+                                        ),
                                       ]
                                     ),
                                     _vm._v(" "),
@@ -35168,13 +38983,13 @@ var render = function() {
                                       "jet-dropdown-link",
                                       {
                                         attrs: {
-                                          href: _vm.route("profile.show")
-                                        }
+                                          href: _vm.route("profile.show"),
+                                        },
                                       },
                                       [
                                         _vm._v(
                                           "\n                                        Profile\n                                    "
-                                        )
+                                        ),
                                       ]
                                     ),
                                     _vm._v(" "),
@@ -35185,33 +39000,33 @@ var render = function() {
                                             attrs: {
                                               href: _vm.route(
                                                 "api-tokens.index"
-                                              )
-                                            }
+                                              ),
+                                            },
                                           },
                                           [
                                             _vm._v(
                                               "\n                                        API Tokens\n                                    "
-                                            )
+                                            ),
                                           ]
                                         )
                                       : _vm._e(),
                                     _vm._v(" "),
                                     _c("div", {
-                                      staticClass: "border-t border-gray-100"
+                                      staticClass: "border-t border-gray-100",
                                     }),
                                     _vm._v(" "),
                                     _c(
                                       "form",
                                       {
                                         on: {
-                                          submit: function($event) {
+                                          submit: function ($event) {
                                             $event.preventDefault()
                                             return _vm.logout.apply(
                                               null,
                                               arguments
                                             )
-                                          }
-                                        }
+                                          },
+                                        },
                                       },
                                       [
                                         _c(
@@ -35220,21 +39035,21 @@ var render = function() {
                                           [
                                             _vm._v(
                                               "\n                                            Logout\n                                        "
-                                            )
+                                            ),
                                           ]
-                                        )
+                                        ),
                                       ],
                                       1
-                                    )
+                                    ),
                                   ]
                                 },
-                                proxy: true
-                              }
-                            ])
-                          })
+                                proxy: true,
+                              },
+                            ]),
+                          }),
                         ],
                         1
-                      )
+                      ),
                     ]
                   ),
                   _vm._v(" "),
@@ -35248,10 +39063,11 @@ var render = function() {
                           staticClass:
                             "inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 focus:text-gray-500 transition duration-150 ease-in-out",
                           on: {
-                            click: function($event) {
-                              _vm.showingNavigationDropdown = !_vm.showingNavigationDropdown
-                            }
-                          }
+                            click: function ($event) {
+                              _vm.showingNavigationDropdown =
+                                !_vm.showingNavigationDropdown
+                            },
+                          },
                         },
                         [
                           _c(
@@ -35261,42 +39077,42 @@ var render = function() {
                               attrs: {
                                 stroke: "currentColor",
                                 fill: "none",
-                                viewBox: "0 0 24 24"
-                              }
+                                viewBox: "0 0 24 24",
+                              },
                             },
                             [
                               _c("path", {
                                 class: {
                                   hidden: _vm.showingNavigationDropdown,
-                                  "inline-flex": !_vm.showingNavigationDropdown
+                                  "inline-flex": !_vm.showingNavigationDropdown,
                                 },
                                 attrs: {
                                   "stroke-linecap": "round",
                                   "stroke-linejoin": "round",
                                   "stroke-width": "2",
-                                  d: "M4 6h16M4 12h16M4 18h16"
-                                }
+                                  d: "M4 6h16M4 12h16M4 18h16",
+                                },
                               }),
                               _vm._v(" "),
                               _c("path", {
                                 class: {
                                   hidden: !_vm.showingNavigationDropdown,
-                                  "inline-flex": _vm.showingNavigationDropdown
+                                  "inline-flex": _vm.showingNavigationDropdown,
                                 },
                                 attrs: {
                                   "stroke-linecap": "round",
                                   "stroke-linejoin": "round",
                                   "stroke-width": "2",
-                                  d: "M6 18L18 6M6 6l12 12"
-                                }
-                              })
+                                  d: "M6 18L18 6M6 6l12 12",
+                                },
+                              }),
                             ]
-                          )
+                          ),
                         ]
-                      )
+                      ),
                     ]
-                  )
-                ])
+                  ),
+                ]),
               ]
             ),
             _vm._v(" "),
@@ -35306,8 +39122,8 @@ var render = function() {
                 staticClass: "sm:hidden",
                 class: {
                   block: _vm.showingNavigationDropdown,
-                  hidden: !_vm.showingNavigationDropdown
-                }
+                  hidden: !_vm.showingNavigationDropdown,
+                },
               },
               [
                 _c(
@@ -35319,15 +39135,15 @@ var render = function() {
                       {
                         attrs: {
                           href: _vm.route("home"),
-                          active: _vm.route().current("home")
-                        }
+                          active: _vm.route().current("home"),
+                        },
                       },
                       [
                         _vm._v(
                           "\n                        Home\n                    "
-                        )
+                        ),
                       ]
-                    )
+                    ),
                   ],
                   1
                 ),
@@ -35344,9 +39160,9 @@ var render = function() {
                                 "h-10 w-10 rounded-full object-cover",
                               attrs: {
                                 src: _vm.$page.props.user.profile_photo_url,
-                                alt: _vm.$page.props.user.name
-                              }
-                            })
+                                alt: _vm.$page.props.user.name,
+                              },
+                            }),
                           ])
                         : _vm._e(),
                       _vm._v(" "),
@@ -35354,7 +39170,7 @@ var render = function() {
                         _c(
                           "div",
                           {
-                            staticClass: "font-medium text-base text-gray-800"
+                            staticClass: "font-medium text-base text-gray-800",
                           },
                           [_vm._v(_vm._s(_vm.$page.props.user.name))]
                         ),
@@ -35363,8 +39179,8 @@ var render = function() {
                           "div",
                           { staticClass: "font-medium text-sm text-gray-500" },
                           [_vm._v(_vm._s(_vm.$page.props.user.email))]
-                        )
-                      ])
+                        ),
+                      ]),
                     ]),
                     _vm._v(" "),
                     _c(
@@ -35376,13 +39192,13 @@ var render = function() {
                           {
                             attrs: {
                               href: _vm.route("profile.show"),
-                              active: _vm.route().current("profile.show")
-                            }
+                              active: _vm.route().current("profile.show"),
+                            },
                           },
                           [
                             _vm._v(
                               "\n                            Profile\n                        "
-                            )
+                            ),
                           ]
                         ),
                         _vm._v(" "),
@@ -35394,13 +39210,13 @@ var render = function() {
                                   href: _vm.route("api-tokens.index"),
                                   active: _vm
                                     .route()
-                                    .current("api-tokens.index")
-                                }
+                                    .current("api-tokens.index"),
+                                },
                               },
                               [
                                 _vm._v(
                                   "\n                            API Tokens\n                        "
-                                )
+                                ),
                               ]
                             )
                           : _vm._e(),
@@ -35410,11 +39226,11 @@ var render = function() {
                           {
                             attrs: { method: "POST" },
                             on: {
-                              submit: function($event) {
+                              submit: function ($event) {
                                 $event.preventDefault()
                                 return _vm.logout.apply(null, arguments)
-                              }
-                            }
+                              },
+                            },
                           },
                           [
                             _c(
@@ -35423,9 +39239,9 @@ var render = function() {
                               [
                                 _vm._v(
                                   "\n                                Logout\n                            "
-                                )
+                                ),
                               ]
-                            )
+                            ),
                           ],
                           1
                         ),
@@ -35433,19 +39249,19 @@ var render = function() {
                         _vm.$page.props.jetstream.hasTeamFeatures
                           ? [
                               _c("div", {
-                                staticClass: "border-t border-gray-200"
+                                staticClass: "border-t border-gray-200",
                               }),
                               _vm._v(" "),
                               _c(
                                 "div",
                                 {
                                   staticClass:
-                                    "block px-4 py-2 text-xs text-gray-400"
+                                    "block px-4 py-2 text-xs text-gray-400",
                                 },
                                 [
                                   _vm._v(
                                     "\n                                Manage Team\n                            "
-                                  )
+                                  ),
                                 ]
                               ),
                               _vm._v(" "),
@@ -35457,13 +39273,13 @@ var render = function() {
                                       "teams.show",
                                       _vm.$page.props.user.current_team
                                     ),
-                                    active: _vm.route().current("teams.show")
-                                  }
+                                    active: _vm.route().current("teams.show"),
+                                  },
                                 },
                                 [
                                   _vm._v(
                                     "\n                                Team Settings\n                            "
-                                  )
+                                  ),
                                 ]
                               ),
                               _vm._v(" "),
@@ -35472,110 +39288,112 @@ var render = function() {
                                 {
                                   attrs: {
                                     href: _vm.route("teams.create"),
-                                    active: _vm.route().current("teams.create")
-                                  }
+                                    active: _vm.route().current("teams.create"),
+                                  },
                                 },
                                 [
                                   _vm._v(
                                     "\n                                Create New Team\n                            "
-                                  )
+                                  ),
                                 ]
                               ),
                               _vm._v(" "),
                               _c("div", {
-                                staticClass: "border-t border-gray-200"
+                                staticClass: "border-t border-gray-200",
                               }),
                               _vm._v(" "),
                               _c(
                                 "div",
                                 {
                                   staticClass:
-                                    "block px-4 py-2 text-xs text-gray-400"
+                                    "block px-4 py-2 text-xs text-gray-400",
                                 },
                                 [
                                   _vm._v(
                                     "\n                                Switch Teams\n                            "
-                                  )
+                                  ),
                                 ]
                               ),
                               _vm._v(" "),
-                              _vm._l(_vm.$page.props.user.all_teams, function(
-                                team
-                              ) {
-                                return [
-                                  _c(
-                                    "form",
-                                    {
-                                      key: team.id,
-                                      on: {
-                                        submit: function($event) {
-                                          $event.preventDefault()
-                                          return _vm.switchToTeam(team)
-                                        }
-                                      }
-                                    },
-                                    [
-                                      _c(
-                                        "jet-responsive-nav-link",
-                                        { attrs: { as: "button" } },
-                                        [
-                                          _c(
-                                            "div",
-                                            {
-                                              staticClass: "flex items-center"
-                                            },
-                                            [
-                                              team.id ==
-                                              _vm.$page.props.user
-                                                .current_team_id
-                                                ? _c(
-                                                    "svg",
-                                                    {
-                                                      staticClass:
-                                                        "mr-2 h-5 w-5 text-green-400",
-                                                      attrs: {
-                                                        fill: "none",
-                                                        "stroke-linecap":
-                                                          "round",
-                                                        "stroke-linejoin":
-                                                          "round",
-                                                        "stroke-width": "2",
-                                                        stroke: "currentColor",
-                                                        viewBox: "0 0 24 24"
-                                                      }
-                                                    },
-                                                    [
-                                                      _c("path", {
+                              _vm._l(
+                                _vm.$page.props.user.all_teams,
+                                function (team) {
+                                  return [
+                                    _c(
+                                      "form",
+                                      {
+                                        key: team.id,
+                                        on: {
+                                          submit: function ($event) {
+                                            $event.preventDefault()
+                                            return _vm.switchToTeam(team)
+                                          },
+                                        },
+                                      },
+                                      [
+                                        _c(
+                                          "jet-responsive-nav-link",
+                                          { attrs: { as: "button" } },
+                                          [
+                                            _c(
+                                              "div",
+                                              {
+                                                staticClass:
+                                                  "flex items-center",
+                                              },
+                                              [
+                                                team.id ==
+                                                _vm.$page.props.user
+                                                  .current_team_id
+                                                  ? _c(
+                                                      "svg",
+                                                      {
+                                                        staticClass:
+                                                          "mr-2 h-5 w-5 text-green-400",
                                                         attrs: {
-                                                          d:
-                                                            "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                                                        }
-                                                      })
-                                                    ]
-                                                  )
-                                                : _vm._e(),
-                                              _vm._v(" "),
-                                              _c("div", [
-                                                _vm._v(_vm._s(team.name))
-                                              ])
-                                            ]
-                                          )
-                                        ]
-                                      )
-                                    ],
-                                    1
-                                  )
-                                ]
-                              })
+                                                          fill: "none",
+                                                          "stroke-linecap":
+                                                            "round",
+                                                          "stroke-linejoin":
+                                                            "round",
+                                                          "stroke-width": "2",
+                                                          stroke:
+                                                            "currentColor",
+                                                          viewBox: "0 0 24 24",
+                                                        },
+                                                      },
+                                                      [
+                                                        _c("path", {
+                                                          attrs: {
+                                                            d: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z",
+                                                          },
+                                                        }),
+                                                      ]
+                                                    )
+                                                  : _vm._e(),
+                                                _vm._v(" "),
+                                                _c("div", [
+                                                  _vm._v(_vm._s(team.name)),
+                                                ]),
+                                              ]
+                                            ),
+                                          ]
+                                        ),
+                                      ],
+                                      1
+                                    ),
+                                  ]
+                                }
+                              ),
                             ]
-                          : _vm._e()
+                          : _vm._e(),
                       ],
                       2
-                    )
+                    ),
                   ]
-                )
+                ),
               ]
-            )
+            ),
           ]),
           _vm._v(" "),
           _c(
@@ -35585,10 +39403,10 @@ var render = function() {
             2
           ),
           _vm._v(" "),
-          _c("portal-target", { attrs: { name: "modal", multiple: "" } })
+          _c("portal-target", { attrs: { name: "modal", multiple: "" } }),
         ],
         1
-      )
+      ),
     ],
     1
   )
@@ -35612,7 +39430,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -35624,25 +39442,25 @@ var render = function() {
         scopedSlots: _vm._u([
           {
             key: "title",
-            fn: function() {
+            fn: function () {
               return [_vm._v("\n            Create API Token\n        ")]
             },
-            proxy: true
+            proxy: true,
           },
           {
             key: "description",
-            fn: function() {
+            fn: function () {
               return [
                 _vm._v(
                   "\n            API tokens allow third-party services to authenticate with our application on your behalf.\n        "
-                )
+                ),
               ]
             },
-            proxy: true
+            proxy: true,
           },
           {
             key: "form",
-            fn: function() {
+            fn: function () {
               return [
                 _c(
                   "div",
@@ -35655,17 +39473,17 @@ var render = function() {
                       attrs: { id: "name", type: "text", autofocus: "" },
                       model: {
                         value: _vm.createApiTokenForm.name,
-                        callback: function($$v) {
+                        callback: function ($$v) {
                           _vm.$set(_vm.createApiTokenForm, "name", $$v)
                         },
-                        expression: "createApiTokenForm.name"
-                      }
+                        expression: "createApiTokenForm.name",
+                      },
                     }),
                     _vm._v(" "),
                     _c("jet-input-error", {
                       staticClass: "mt-2",
-                      attrs: { message: _vm.createApiTokenForm.errors.name }
-                    })
+                      attrs: { message: _vm.createApiTokenForm.errors.name },
+                    }),
                   ],
                   1
                 ),
@@ -35676,70 +39494,73 @@ var render = function() {
                       { staticClass: "col-span-6" },
                       [
                         _c("jet-label", {
-                          attrs: { for: "permissions", value: "Permissions" }
+                          attrs: { for: "permissions", value: "Permissions" },
                         }),
                         _vm._v(" "),
                         _c(
                           "div",
                           {
                             staticClass:
-                              "mt-2 grid grid-cols-1 md:grid-cols-2 gap-4"
+                              "mt-2 grid grid-cols-1 md:grid-cols-2 gap-4",
                           },
-                          _vm._l(_vm.availablePermissions, function(
-                            permission
-                          ) {
-                            return _c("div", { key: permission }, [
-                              _c(
-                                "label",
-                                { staticClass: "flex items-center" },
-                                [
-                                  _c("jet-checkbox", {
-                                    attrs: { value: permission },
-                                    model: {
-                                      value: _vm.createApiTokenForm.permissions,
-                                      callback: function($$v) {
-                                        _vm.$set(
-                                          _vm.createApiTokenForm,
-                                          "permissions",
-                                          $$v
-                                        )
+                          _vm._l(
+                            _vm.availablePermissions,
+                            function (permission) {
+                              return _c("div", { key: permission }, [
+                                _c(
+                                  "label",
+                                  { staticClass: "flex items-center" },
+                                  [
+                                    _c("jet-checkbox", {
+                                      attrs: { value: permission },
+                                      model: {
+                                        value:
+                                          _vm.createApiTokenForm.permissions,
+                                        callback: function ($$v) {
+                                          _vm.$set(
+                                            _vm.createApiTokenForm,
+                                            "permissions",
+                                            $$v
+                                          )
+                                        },
+                                        expression:
+                                          "createApiTokenForm.permissions",
                                       },
-                                      expression:
-                                        "createApiTokenForm.permissions"
-                                    }
-                                  }),
-                                  _vm._v(" "),
-                                  _c(
-                                    "span",
-                                    {
-                                      staticClass: "ml-2 text-sm text-gray-600"
-                                    },
-                                    [_vm._v(_vm._s(permission))]
-                                  )
-                                ],
-                                1
-                              )
-                            ])
-                          }),
+                                    }),
+                                    _vm._v(" "),
+                                    _c(
+                                      "span",
+                                      {
+                                        staticClass:
+                                          "ml-2 text-sm text-gray-600",
+                                      },
+                                      [_vm._v(_vm._s(permission))]
+                                    ),
+                                  ],
+                                  1
+                                ),
+                              ])
+                            }
+                          ),
                           0
-                        )
+                        ),
                       ],
                       1
                     )
-                  : _vm._e()
+                  : _vm._e(),
               ]
             },
-            proxy: true
+            proxy: true,
           },
           {
             key: "actions",
-            fn: function() {
+            fn: function () {
               return [
                 _c(
                   "jet-action-message",
                   {
                     staticClass: "mr-3",
-                    attrs: { on: _vm.createApiTokenForm.recentlySuccessful }
+                    attrs: { on: _vm.createApiTokenForm.recentlySuccessful },
                   },
                   [_vm._v("\n                Created.\n            ")]
                 ),
@@ -35748,15 +39569,15 @@ var render = function() {
                   "jet-button",
                   {
                     class: { "opacity-25": _vm.createApiTokenForm.processing },
-                    attrs: { disabled: _vm.createApiTokenForm.processing }
+                    attrs: { disabled: _vm.createApiTokenForm.processing },
                   },
                   [_vm._v("\n                Create\n            ")]
-                )
+                ),
               ]
             },
-            proxy: true
-          }
-        ])
+            proxy: true,
+          },
+        ]),
       }),
       _vm._v(" "),
       _vm.tokens.length > 0
@@ -35774,40 +39595,40 @@ var render = function() {
                       [
                         {
                           key: "title",
-                          fn: function() {
+                          fn: function () {
                             return [
                               _vm._v(
                                 "\n                    Manage API Tokens\n                "
-                              )
+                              ),
                             ]
                           },
-                          proxy: true
+                          proxy: true,
                         },
                         {
                           key: "description",
-                          fn: function() {
+                          fn: function () {
                             return [
                               _vm._v(
                                 "\n                    You may delete any of your existing tokens if they are no longer needed.\n                "
-                              )
+                              ),
                             ]
                           },
-                          proxy: true
+                          proxy: true,
                         },
                         {
                           key: "content",
-                          fn: function() {
+                          fn: function () {
                             return [
                               _c(
                                 "div",
                                 { staticClass: "space-y-6" },
-                                _vm._l(_vm.tokens, function(token) {
+                                _vm._l(_vm.tokens, function (token) {
                                   return _c(
                                     "div",
                                     {
                                       key: token.id,
                                       staticClass:
-                                        "flex items-center justify-between"
+                                        "flex items-center justify-between",
                                     },
                                     [
                                       _c("div", [
@@ -35815,7 +39636,7 @@ var render = function() {
                                           "\n                                " +
                                             _vm._s(token.name) +
                                             "\n                            "
-                                        )
+                                        ),
                                       ]),
                                       _vm._v(" "),
                                       _c(
@@ -35827,7 +39648,7 @@ var render = function() {
                                                 "div",
                                                 {
                                                   staticClass:
-                                                    "text-sm text-gray-400"
+                                                    "text-sm text-gray-400",
                                                 },
                                                 [
                                                   _vm._v(
@@ -35836,7 +39657,7 @@ var render = function() {
                                                         token.last_used_ago
                                                       ) +
                                                       "\n                                "
-                                                  )
+                                                  ),
                                                 ]
                                               )
                                             : _vm._e(),
@@ -35848,17 +39669,17 @@ var render = function() {
                                                   staticClass:
                                                     "cursor-pointer ml-6 text-sm text-gray-400 underline",
                                                   on: {
-                                                    click: function($event) {
+                                                    click: function ($event) {
                                                       return _vm.manageApiTokenPermissions(
                                                         token
                                                       )
-                                                    }
-                                                  }
+                                                    },
+                                                  },
                                                 },
                                                 [
                                                   _vm._v(
                                                     "\n                                    Permissions\n                                "
-                                                  )
+                                                  ),
                                                 ]
                                               )
                                             : _vm._e(),
@@ -35869,39 +39690,39 @@ var render = function() {
                                               staticClass:
                                                 "cursor-pointer ml-6 text-sm text-red-500",
                                               on: {
-                                                click: function($event) {
+                                                click: function ($event) {
                                                   return _vm.confirmApiTokenDeletion(
                                                     token
                                                   )
-                                                }
-                                              }
+                                                },
+                                              },
                                             },
                                             [
                                               _vm._v(
                                                 "\n                                    Delete\n                                "
-                                              )
+                                              ),
                                             ]
-                                          )
+                                          ),
                                         ]
-                                      )
+                                      ),
                                     ]
                                   )
                                 }),
                                 0
-                              )
+                              ),
                             ]
                           },
-                          proxy: true
-                        }
+                          proxy: true,
+                        },
                       ],
                       null,
                       false,
                       3995867736
-                    )
-                  })
+                    ),
+                  }),
                 ],
                 1
-              )
+              ),
             ],
             1
           )
@@ -35910,26 +39731,26 @@ var render = function() {
       _c("jet-dialog-modal", {
         attrs: { show: _vm.displayingToken },
         on: {
-          close: function($event) {
+          close: function ($event) {
             _vm.displayingToken = false
-          }
+          },
         },
         scopedSlots: _vm._u([
           {
             key: "title",
-            fn: function() {
+            fn: function () {
               return [_vm._v("\n            API Token\n        ")]
             },
-            proxy: true
+            proxy: true,
           },
           {
             key: "content",
-            fn: function() {
+            fn: function () {
               return [
                 _c("div", [
                   _vm._v(
                     "\n                Please copy your new API token. For your security, it won't be shown again.\n            "
-                  )
+                  ),
                 ]),
                 _vm._v(" "),
                 _vm.$page.props.jetstream.flash.token
@@ -35937,66 +39758,66 @@ var render = function() {
                       "div",
                       {
                         staticClass:
-                          "mt-4 bg-gray-100 px-4 py-2 rounded font-mono text-sm text-gray-500"
+                          "mt-4 bg-gray-100 px-4 py-2 rounded font-mono text-sm text-gray-500",
                       },
                       [
                         _vm._v(
                           "\n                " +
                             _vm._s(_vm.$page.props.jetstream.flash.token) +
                             "\n            "
-                        )
+                        ),
                       ]
                     )
-                  : _vm._e()
+                  : _vm._e(),
               ]
             },
-            proxy: true
+            proxy: true,
           },
           {
             key: "footer",
-            fn: function() {
+            fn: function () {
               return [
                 _c(
                   "jet-secondary-button",
                   {
                     nativeOn: {
-                      click: function($event) {
+                      click: function ($event) {
                         _vm.displayingToken = false
-                      }
-                    }
+                      },
+                    },
                   },
                   [_vm._v("\n                Close\n            ")]
-                )
+                ),
               ]
             },
-            proxy: true
-          }
-        ])
+            proxy: true,
+          },
+        ]),
       }),
       _vm._v(" "),
       _c("jet-dialog-modal", {
         attrs: { show: _vm.managingPermissionsFor },
         on: {
-          close: function($event) {
+          close: function ($event) {
             _vm.managingPermissionsFor = null
-          }
+          },
         },
         scopedSlots: _vm._u([
           {
             key: "title",
-            fn: function() {
+            fn: function () {
               return [_vm._v("\n            API Token Permissions\n        ")]
             },
-            proxy: true
+            proxy: true,
           },
           {
             key: "content",
-            fn: function() {
+            fn: function () {
               return [
                 _c(
                   "div",
                   { staticClass: "grid grid-cols-1 md:grid-cols-2 gap-4" },
-                  _vm._l(_vm.availablePermissions, function(permission) {
+                  _vm._l(_vm.availablePermissions, function (permission) {
                     return _c("div", { key: permission }, [
                       _c(
                         "label",
@@ -36006,45 +39827,45 @@ var render = function() {
                             attrs: { value: permission },
                             model: {
                               value: _vm.updateApiTokenForm.permissions,
-                              callback: function($$v) {
+                              callback: function ($$v) {
                                 _vm.$set(
                                   _vm.updateApiTokenForm,
                                   "permissions",
                                   $$v
                                 )
                               },
-                              expression: "updateApiTokenForm.permissions"
-                            }
+                              expression: "updateApiTokenForm.permissions",
+                            },
                           }),
                           _vm._v(" "),
                           _c(
                             "span",
                             { staticClass: "ml-2 text-sm text-gray-600" },
                             [_vm._v(_vm._s(permission))]
-                          )
+                          ),
                         ],
                         1
-                      )
+                      ),
                     ])
                   }),
                   0
-                )
+                ),
               ]
             },
-            proxy: true
+            proxy: true,
           },
           {
             key: "footer",
-            fn: function() {
+            fn: function () {
               return [
                 _c(
                   "jet-secondary-button",
                   {
                     nativeOn: {
-                      click: function($event) {
+                      click: function ($event) {
                         _vm.managingPermissionsFor = null
-                      }
-                    }
+                      },
+                    },
                   },
                   [_vm._v("\n                Nevermind\n            ")]
                 ),
@@ -36056,58 +39877,58 @@ var render = function() {
                     class: { "opacity-25": _vm.updateApiTokenForm.processing },
                     attrs: { disabled: _vm.updateApiTokenForm.processing },
                     nativeOn: {
-                      click: function($event) {
+                      click: function ($event) {
                         return _vm.updateApiToken.apply(null, arguments)
-                      }
-                    }
+                      },
+                    },
                   },
                   [_vm._v("\n                Save\n            ")]
-                )
+                ),
               ]
             },
-            proxy: true
-          }
-        ])
+            proxy: true,
+          },
+        ]),
       }),
       _vm._v(" "),
       _c("jet-confirmation-modal", {
         attrs: { show: _vm.apiTokenBeingDeleted },
         on: {
-          close: function($event) {
+          close: function ($event) {
             _vm.apiTokenBeingDeleted = null
-          }
+          },
         },
         scopedSlots: _vm._u([
           {
             key: "title",
-            fn: function() {
+            fn: function () {
               return [_vm._v("\n            Delete API Token\n        ")]
             },
-            proxy: true
+            proxy: true,
           },
           {
             key: "content",
-            fn: function() {
+            fn: function () {
               return [
                 _vm._v(
                   "\n            Are you sure you would like to delete this API token?\n        "
-                )
+                ),
               ]
             },
-            proxy: true
+            proxy: true,
           },
           {
             key: "footer",
-            fn: function() {
+            fn: function () {
               return [
                 _c(
                   "jet-secondary-button",
                   {
                     nativeOn: {
-                      click: function($event) {
+                      click: function ($event) {
                         _vm.apiTokenBeingDeleted = null
-                      }
-                    }
+                      },
+                    },
                   },
                   [_vm._v("\n                Nevermind\n            ")]
                 ),
@@ -36119,19 +39940,19 @@ var render = function() {
                     class: { "opacity-25": _vm.deleteApiTokenForm.processing },
                     attrs: { disabled: _vm.deleteApiTokenForm.processing },
                     nativeOn: {
-                      click: function($event) {
+                      click: function ($event) {
                         return _vm.deleteApiToken.apply(null, arguments)
-                      }
-                    }
+                      },
+                    },
                   },
                   [_vm._v("\n                Delete\n            ")]
-                )
+                ),
               ]
             },
-            proxy: true
-          }
-        ])
-      })
+            proxy: true,
+          },
+        ]),
+      }),
     ],
     1
   )
@@ -36155,7 +39976,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -36165,21 +39986,21 @@ var render = function() {
       scopedSlots: _vm._u([
         {
           key: "header",
-          fn: function() {
+          fn: function () {
             return [
               _c(
                 "h2",
                 {
                   staticClass:
-                    "font-semibold text-xl text-gray-800 leading-tight"
+                    "font-semibold text-xl text-gray-800 leading-tight",
                 },
                 [_vm._v("\n            API Tokens\n        ")]
-              )
+              ),
             ]
           },
-          proxy: true
-        }
-      ])
+          proxy: true,
+        },
+      ]),
     },
     [
       _vm._v(" "),
@@ -36192,13 +40013,13 @@ var render = function() {
               attrs: {
                 tokens: _vm.tokens,
                 "available-permissions": _vm.availablePermissions,
-                "default-permissions": _vm.defaultPermissions
-              }
-            })
+                "default-permissions": _vm.defaultPermissions,
+              },
+            }),
           ],
           1
-        )
-      ])
+        ),
+      ]),
     ]
   )
 }
@@ -36221,8 +40042,74 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function () {}
+var render = function () {
+  var _vm = this
+  var _h = _vm.$createElement
+  var _c = _vm._self._c || _h
+  return _c("app-layout", [
+    _vm.$page.props.userAppointments.length > 0 ||
+    _vm.$page.props.newAppointment
+      ? _c("div", { staticClass: "grid grid-cols-2 gap-4" }, [
+          _c(
+            "div",
+            {
+              staticClass:
+                "mb-4 overflow-hidden bg-white shadow-md rounded-3xl",
+            },
+            [
+              _c("appointments-list", {
+                attrs: {
+                  userAppointments: _vm.$page.props.userAppointments,
+                  newAppointment: _vm.$page.props.newAppointment,
+                  newAppointmentShop: _vm.$page.props.newAppointmentShop,
+                  selected: _vm.selected,
+                },
+                on: {
+                  updateSelectedAppointment: _vm.updateSelectedAppointment,
+                },
+              }),
+            ],
+            1
+          ),
+          _vm._v(" "),
+          _c(
+            "div",
+            { staticClass: "p-4 mb-4 bg-white shadow-md rounded-3xl" },
+            [
+              _vm.$page.props.newAppointment
+                ? _c("appointments-form", {
+                    attrs: {
+                      newAppointmentShop: _vm.newAppointmentShop,
+                      selected: _vm.selected,
+                    },
+                  })
+                : _c("appointments-chat", {
+                    attrs: { selected: _vm.selected },
+                  }),
+            ],
+            1
+          ),
+        ])
+      : _c("div", { staticClass: "grid grid-cols-1 gap-4" }, [
+          _c(
+            "div",
+            {
+              staticClass:
+                "p-4 mb-4 bg-white shadow-md rounded-3xl text-center",
+            },
+            [
+              _c("h2", [
+                _vm._v(
+                  "You don't have any appointments go to the homepage to create some!"
+                ),
+              ]),
+            ]
+          ),
+        ]),
+  ])
+}
 var staticRenderFns = []
+render._withStripped = true
 
 
 
@@ -36240,7 +40127,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -36250,19 +40137,19 @@ var render = function() {
       scopedSlots: _vm._u([
         {
           key: "logo",
-          fn: function() {
+          fn: function () {
             return [_c("jet-authentication-card-logo")]
           },
-          proxy: true
-        }
-      ])
+          proxy: true,
+        },
+      ]),
     },
     [
       _vm._v(" "),
       _c("div", { staticClass: "mb-4 text-sm text-gray-600" }, [
         _vm._v(
           "\n        This is a secure area of the application. Please confirm your password before continuing.\n    "
-        )
+        ),
       ]),
       _vm._v(" "),
       _c("jet-validation-errors", { staticClass: "mb-4" }),
@@ -36271,18 +40158,18 @@ var render = function() {
         "form",
         {
           on: {
-            submit: function($event) {
+            submit: function ($event) {
               $event.preventDefault()
               return _vm.submit.apply(null, arguments)
-            }
-          }
+            },
+          },
         },
         [
           _c(
             "div",
             [
               _c("jet-label", {
-                attrs: { for: "password", value: "Password" }
+                attrs: { for: "password", value: "Password" },
               }),
               _vm._v(" "),
               _c("jet-input", {
@@ -36292,16 +40179,16 @@ var render = function() {
                   type: "password",
                   required: "",
                   autocomplete: "current-password",
-                  autofocus: ""
+                  autofocus: "",
                 },
                 model: {
                   value: _vm.form.password,
-                  callback: function($$v) {
+                  callback: function ($$v) {
                     _vm.$set(_vm.form, "password", $$v)
                   },
-                  expression: "form.password"
-                }
-              })
+                  expression: "form.password",
+                },
+              }),
             ],
             1
           ),
@@ -36315,15 +40202,15 @@ var render = function() {
                 {
                   staticClass: "ml-4",
                   class: { "opacity-25": _vm.form.processing },
-                  attrs: { disabled: _vm.form.processing }
+                  attrs: { disabled: _vm.form.processing },
                 },
                 [_vm._v("\n                Confirm\n            ")]
-              )
+              ),
             ],
             1
-          )
+          ),
         ]
-      )
+      ),
     ],
     1
   )
@@ -36347,7 +40234,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -36357,19 +40244,19 @@ var render = function() {
       scopedSlots: _vm._u([
         {
           key: "logo",
-          fn: function() {
+          fn: function () {
             return [_c("jet-authentication-card-logo")]
           },
-          proxy: true
-        }
-      ])
+          proxy: true,
+        },
+      ]),
     },
     [
       _vm._v(" "),
       _c("div", { staticClass: "mb-4 text-sm text-gray-600" }, [
         _vm._v(
           "\n        Forgot your password? No problem. Just let us know your email address and we will email you a password reset link that will allow you to choose a new one.\n    "
-        )
+        ),
       ]),
       _vm._v(" "),
       _vm.status
@@ -36386,11 +40273,11 @@ var render = function() {
         "form",
         {
           on: {
-            submit: function($event) {
+            submit: function ($event) {
               $event.preventDefault()
               return _vm.submit.apply(null, arguments)
-            }
-          }
+            },
+          },
         },
         [
           _c(
@@ -36404,16 +40291,16 @@ var render = function() {
                   id: "email",
                   type: "email",
                   required: "",
-                  autofocus: ""
+                  autofocus: "",
                 },
                 model: {
                   value: _vm.form.email,
-                  callback: function($$v) {
+                  callback: function ($$v) {
                     _vm.$set(_vm.form, "email", $$v)
                   },
-                  expression: "form.email"
-                }
-              })
+                  expression: "form.email",
+                },
+              }),
             ],
             1
           ),
@@ -36426,19 +40313,19 @@ var render = function() {
                 "jet-button",
                 {
                   class: { "opacity-25": _vm.form.processing },
-                  attrs: { disabled: _vm.form.processing }
+                  attrs: { disabled: _vm.form.processing },
                 },
                 [
                   _vm._v(
                     "\n                Email Password Reset Link\n            "
-                  )
+                  ),
                 ]
-              )
+              ),
             ],
             1
-          )
+          ),
         ]
-      )
+      ),
     ],
     1
   )
@@ -36462,7 +40349,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -36472,12 +40359,12 @@ var render = function() {
       scopedSlots: _vm._u([
         {
           key: "logo",
-          fn: function() {
+          fn: function () {
             return [_c("jet-authentication-card-logo")]
           },
-          proxy: true
-        }
-      ])
+          proxy: true,
+        },
+      ]),
     },
     [
       _vm._v(" "),
@@ -36495,11 +40382,11 @@ var render = function() {
         "form",
         {
           on: {
-            submit: function($event) {
+            submit: function ($event) {
               $event.preventDefault()
               return _vm.submit.apply(null, arguments)
-            }
-          }
+            },
+          },
         },
         [
           _c(
@@ -36513,16 +40400,16 @@ var render = function() {
                   id: "email",
                   type: "email",
                   required: "",
-                  autofocus: ""
+                  autofocus: "",
                 },
                 model: {
                   value: _vm.form.email,
-                  callback: function($$v) {
+                  callback: function ($$v) {
                     _vm.$set(_vm.form, "email", $$v)
                   },
-                  expression: "form.email"
-                }
-              })
+                  expression: "form.email",
+                },
+              }),
             ],
             1
           ),
@@ -36532,7 +40419,7 @@ var render = function() {
             { staticClass: "mt-4" },
             [
               _c("jet-label", {
-                attrs: { for: "password", value: "Password" }
+                attrs: { for: "password", value: "Password" },
               }),
               _vm._v(" "),
               _c("jet-input", {
@@ -36541,16 +40428,16 @@ var render = function() {
                   id: "password",
                   type: "password",
                   required: "",
-                  autocomplete: "current-password"
+                  autocomplete: "current-password",
                 },
                 model: {
                   value: _vm.form.password,
-                  callback: function($$v) {
+                  callback: function ($$v) {
                     _vm.$set(_vm.form, "password", $$v)
                   },
-                  expression: "form.password"
-                }
-              })
+                  expression: "form.password",
+                },
+              }),
             ],
             1
           ),
@@ -36564,19 +40451,19 @@ var render = function() {
                   attrs: { name: "remember" },
                   model: {
                     value: _vm.form.remember,
-                    callback: function($$v) {
+                    callback: function ($$v) {
                       _vm.$set(_vm.form, "remember", $$v)
                     },
-                    expression: "form.remember"
-                  }
+                    expression: "form.remember",
+                  },
                 }),
                 _vm._v(" "),
                 _c("span", { staticClass: "ml-2 text-sm text-gray-600" }, [
-                  _vm._v("Remember me")
-                ])
+                  _vm._v("Remember me"),
+                ]),
               ],
               1
-            )
+            ),
           ]),
           _vm._v(" "),
           _c(
@@ -36589,12 +40476,12 @@ var render = function() {
                     {
                       staticClass:
                         "underline text-sm text-gray-600 hover:text-gray-900",
-                      attrs: { href: _vm.route("password.request") }
+                      attrs: { href: _vm.route("password.request") },
                     },
                     [
                       _vm._v(
                         "\n                Forgot your password?\n            "
-                      )
+                      ),
                     ]
                   )
                 : _vm._e(),
@@ -36604,15 +40491,15 @@ var render = function() {
                 {
                   staticClass: "ml-4",
                   class: { "opacity-25": _vm.form.processing },
-                  attrs: { disabled: _vm.form.processing }
+                  attrs: { disabled: _vm.form.processing },
                 },
                 [_vm._v("\n                Login\n            ")]
-              )
+              ),
             ],
             1
-          )
+          ),
         ]
-      )
+      ),
     ],
     1
   )
@@ -36636,7 +40523,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -36646,12 +40533,12 @@ var render = function() {
       scopedSlots: _vm._u([
         {
           key: "logo",
-          fn: function() {
+          fn: function () {
             return [_c("jet-authentication-card-logo")]
           },
-          proxy: true
-        }
-      ])
+          proxy: true,
+        },
+      ]),
     },
     [
       _vm._v(" "),
@@ -36661,11 +40548,11 @@ var render = function() {
         "form",
         {
           on: {
-            submit: function($event) {
+            submit: function ($event) {
               $event.preventDefault()
               return _vm.submit.apply(null, arguments)
-            }
-          }
+            },
+          },
         },
         [
           _c(
@@ -36680,16 +40567,16 @@ var render = function() {
                   type: "text",
                   required: "",
                   autofocus: "",
-                  autocomplete: "name"
+                  autocomplete: "name",
                 },
                 model: {
                   value: _vm.form.name,
-                  callback: function($$v) {
+                  callback: function ($$v) {
                     _vm.$set(_vm.form, "name", $$v)
                   },
-                  expression: "form.name"
-                }
-              })
+                  expression: "form.name",
+                },
+              }),
             ],
             1
           ),
@@ -36705,12 +40592,12 @@ var render = function() {
                 attrs: { id: "email", type: "email", required: "" },
                 model: {
                   value: _vm.form.email,
-                  callback: function($$v) {
+                  callback: function ($$v) {
                     _vm.$set(_vm.form, "email", $$v)
                   },
-                  expression: "form.email"
-                }
-              })
+                  expression: "form.email",
+                },
+              }),
             ],
             1
           ),
@@ -36720,7 +40607,7 @@ var render = function() {
             { staticClass: "mt-4" },
             [
               _c("jet-label", {
-                attrs: { for: "password", value: "Password" }
+                attrs: { for: "password", value: "Password" },
               }),
               _vm._v(" "),
               _c("jet-input", {
@@ -36729,16 +40616,16 @@ var render = function() {
                   id: "password",
                   type: "password",
                   required: "",
-                  autocomplete: "new-password"
+                  autocomplete: "new-password",
                 },
                 model: {
                   value: _vm.form.password,
-                  callback: function($$v) {
+                  callback: function ($$v) {
                     _vm.$set(_vm.form, "password", $$v)
                   },
-                  expression: "form.password"
-                }
-              })
+                  expression: "form.password",
+                },
+              }),
             ],
             1
           ),
@@ -36750,8 +40637,8 @@ var render = function() {
               _c("jet-label", {
                 attrs: {
                   for: "password_confirmation",
-                  value: "Confirm Password"
-                }
+                  value: "Confirm Password",
+                },
               }),
               _vm._v(" "),
               _c("jet-input", {
@@ -36760,16 +40647,16 @@ var render = function() {
                   id: "password_confirmation",
                   type: "password",
                   required: "",
-                  autocomplete: "new-password"
+                  autocomplete: "new-password",
                 },
                 model: {
                   value: _vm.form.password_confirmation,
-                  callback: function($$v) {
+                  callback: function ($$v) {
                     _vm.$set(_vm.form, "password_confirmation", $$v)
                   },
-                  expression: "form.password_confirmation"
-                }
-              })
+                  expression: "form.password_confirmation",
+                },
+              }),
             ],
             1
           ),
@@ -36788,11 +40675,11 @@ var render = function() {
                           attrs: { name: "terms", id: "terms" },
                           model: {
                             value: _vm.form.terms,
-                            callback: function($$v) {
+                            callback: function ($$v) {
                               _vm.$set(_vm.form, "terms", $$v)
                             },
-                            expression: "form.terms"
-                          }
+                            expression: "form.terms",
+                          },
                         }),
                         _vm._v(" "),
                         _c("div", { staticClass: "ml-2" }, [
@@ -36804,8 +40691,8 @@ var render = function() {
                                 "underline text-sm text-gray-600 hover:text-gray-900",
                               attrs: {
                                 target: "_blank",
-                                href: _vm.route("terms.show")
-                              }
+                                href: _vm.route("terms.show"),
+                              },
                             },
                             [_vm._v("Terms of Service")]
                           ),
@@ -36817,16 +40704,16 @@ var render = function() {
                                 "underline text-sm text-gray-600 hover:text-gray-900",
                               attrs: {
                                 target: "_blank",
-                                href: _vm.route("policy.show")
-                              }
+                                href: _vm.route("policy.show"),
+                              },
                             },
                             [_vm._v("Privacy Policy")]
-                          )
-                        ])
+                          ),
+                        ]),
                       ],
                       1
-                    )
-                  ])
+                    ),
+                  ]),
                 ],
                 1
               )
@@ -36841,7 +40728,7 @@ var render = function() {
                 {
                   staticClass:
                     "underline text-sm text-gray-600 hover:text-gray-900",
-                  attrs: { href: _vm.route("login") }
+                  attrs: { href: _vm.route("login") },
                 },
                 [_vm._v("\n                Already registered?\n            ")]
               ),
@@ -36851,15 +40738,15 @@ var render = function() {
                 {
                   staticClass: "ml-4",
                   class: { "opacity-25": _vm.form.processing },
-                  attrs: { disabled: _vm.form.processing }
+                  attrs: { disabled: _vm.form.processing },
                 },
                 [_vm._v("\n                Register\n            ")]
-              )
+              ),
             ],
             1
-          )
+          ),
         ]
-      )
+      ),
     ],
     1
   )
@@ -36883,7 +40770,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -36893,12 +40780,12 @@ var render = function() {
       scopedSlots: _vm._u([
         {
           key: "logo",
-          fn: function() {
+          fn: function () {
             return [_c("jet-authentication-card-logo")]
           },
-          proxy: true
-        }
-      ])
+          proxy: true,
+        },
+      ]),
     },
     [
       _vm._v(" "),
@@ -36908,11 +40795,11 @@ var render = function() {
         "form",
         {
           on: {
-            submit: function($event) {
+            submit: function ($event) {
               $event.preventDefault()
               return _vm.submit.apply(null, arguments)
-            }
-          }
+            },
+          },
         },
         [
           _c(
@@ -36926,16 +40813,16 @@ var render = function() {
                   id: "email",
                   type: "email",
                   required: "",
-                  autofocus: ""
+                  autofocus: "",
                 },
                 model: {
                   value: _vm.form.email,
-                  callback: function($$v) {
+                  callback: function ($$v) {
                     _vm.$set(_vm.form, "email", $$v)
                   },
-                  expression: "form.email"
-                }
-              })
+                  expression: "form.email",
+                },
+              }),
             ],
             1
           ),
@@ -36945,7 +40832,7 @@ var render = function() {
             { staticClass: "mt-4" },
             [
               _c("jet-label", {
-                attrs: { for: "password", value: "Password" }
+                attrs: { for: "password", value: "Password" },
               }),
               _vm._v(" "),
               _c("jet-input", {
@@ -36954,16 +40841,16 @@ var render = function() {
                   id: "password",
                   type: "password",
                   required: "",
-                  autocomplete: "new-password"
+                  autocomplete: "new-password",
                 },
                 model: {
                   value: _vm.form.password,
-                  callback: function($$v) {
+                  callback: function ($$v) {
                     _vm.$set(_vm.form, "password", $$v)
                   },
-                  expression: "form.password"
-                }
-              })
+                  expression: "form.password",
+                },
+              }),
             ],
             1
           ),
@@ -36975,8 +40862,8 @@ var render = function() {
               _c("jet-label", {
                 attrs: {
                   for: "password_confirmation",
-                  value: "Confirm Password"
-                }
+                  value: "Confirm Password",
+                },
               }),
               _vm._v(" "),
               _c("jet-input", {
@@ -36985,16 +40872,16 @@ var render = function() {
                   id: "password_confirmation",
                   type: "password",
                   required: "",
-                  autocomplete: "new-password"
+                  autocomplete: "new-password",
                 },
                 model: {
                   value: _vm.form.password_confirmation,
-                  callback: function($$v) {
+                  callback: function ($$v) {
                     _vm.$set(_vm.form, "password_confirmation", $$v)
                   },
-                  expression: "form.password_confirmation"
-                }
-              })
+                  expression: "form.password_confirmation",
+                },
+              }),
             ],
             1
           ),
@@ -37007,15 +40894,15 @@ var render = function() {
                 "jet-button",
                 {
                   class: { "opacity-25": _vm.form.processing },
-                  attrs: { disabled: _vm.form.processing }
+                  attrs: { disabled: _vm.form.processing },
                 },
                 [_vm._v("\n                Reset Password\n            ")]
-              )
+              ),
             ],
             1
-          )
+          ),
         ]
-      )
+      ),
     ],
     1
   )
@@ -37039,7 +40926,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -37049,12 +40936,12 @@ var render = function() {
       scopedSlots: _vm._u([
         {
           key: "logo",
-          fn: function() {
+          fn: function () {
             return [_c("jet-authentication-card-logo")]
           },
-          proxy: true
-        }
-      ])
+          proxy: true,
+        },
+      ]),
     },
     [
       _vm._v(" "),
@@ -37066,13 +40953,13 @@ var render = function() {
             ? [
                 _vm._v(
                   "\n            Please confirm access to your account by entering the authentication code provided by your authenticator application.\n        "
-                )
+                ),
               ]
             : [
                 _vm._v(
                   "\n            Please confirm access to your account by entering one of your emergency recovery codes.\n        "
-                )
-              ]
+                ),
+              ],
         ],
         2
       ),
@@ -37083,11 +40970,11 @@ var render = function() {
         "form",
         {
           on: {
-            submit: function($event) {
+            submit: function ($event) {
               $event.preventDefault()
               return _vm.submit.apply(null, arguments)
-            }
-          }
+            },
+          },
         },
         [
           !_vm.recovery
@@ -37104,16 +40991,16 @@ var render = function() {
                       type: "text",
                       inputmode: "numeric",
                       autofocus: "",
-                      autocomplete: "one-time-code"
+                      autocomplete: "one-time-code",
                     },
                     model: {
                       value: _vm.form.code,
-                      callback: function($$v) {
+                      callback: function ($$v) {
                         _vm.$set(_vm.form, "code", $$v)
                       },
-                      expression: "form.code"
-                    }
-                  })
+                      expression: "form.code",
+                    },
+                  }),
                 ],
                 1
               )
@@ -37121,7 +41008,7 @@ var render = function() {
                 "div",
                 [
                   _c("jet-label", {
-                    attrs: { for: "recovery_code", value: "Recovery Code" }
+                    attrs: { for: "recovery_code", value: "Recovery Code" },
                   }),
                   _vm._v(" "),
                   _c("jet-input", {
@@ -37130,16 +41017,16 @@ var render = function() {
                     attrs: {
                       id: "recovery_code",
                       type: "text",
-                      autocomplete: "one-time-code"
+                      autocomplete: "one-time-code",
                     },
                     model: {
                       value: _vm.form.recovery_code,
-                      callback: function($$v) {
+                      callback: function ($$v) {
                         _vm.$set(_vm.form, "recovery_code", $$v)
                       },
-                      expression: "form.recovery_code"
-                    }
-                  })
+                      expression: "form.recovery_code",
+                    },
+                  }),
                 ],
                 1
               ),
@@ -37155,24 +41042,24 @@ var render = function() {
                     "text-sm text-gray-600 hover:text-gray-900 underline cursor-pointer",
                   attrs: { type: "button" },
                   on: {
-                    click: function($event) {
+                    click: function ($event) {
                       $event.preventDefault()
                       return _vm.toggleRecovery.apply(null, arguments)
-                    }
-                  }
+                    },
+                  },
                 },
                 [
                   !_vm.recovery
                     ? [
                         _vm._v(
                           "\n                    Use a recovery code\n                "
-                        )
+                        ),
                       ]
                     : [
                         _vm._v(
                           "\n                    Use an authentication code\n                "
-                        )
-                      ]
+                        ),
+                      ],
                 ],
                 2
               ),
@@ -37182,15 +41069,15 @@ var render = function() {
                 {
                   staticClass: "ml-4",
                   class: { "opacity-25": _vm.form.processing },
-                  attrs: { disabled: _vm.form.processing }
+                  attrs: { disabled: _vm.form.processing },
                 },
                 [_vm._v("\n                Login\n            ")]
-              )
+              ),
             ],
             1
-          )
+          ),
         ]
-      )
+      ),
     ],
     1
   )
@@ -37214,7 +41101,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -37224,19 +41111,19 @@ var render = function() {
       scopedSlots: _vm._u([
         {
           key: "logo",
-          fn: function() {
+          fn: function () {
             return [_c("jet-authentication-card-logo")]
           },
-          proxy: true
-        }
-      ])
+          proxy: true,
+        },
+      ]),
     },
     [
       _vm._v(" "),
       _c("div", { staticClass: "mb-4 text-sm text-gray-600" }, [
         _vm._v(
           "\n        Thanks for signing up! Before getting started, could you verify your email address by clicking on the link we just emailed to you? If you didn't receive the email, we will gladly send you another.\n    "
-        )
+        ),
       ]),
       _vm._v(" "),
       _vm.verificationLinkSent
@@ -37246,7 +41133,7 @@ var render = function() {
             [
               _vm._v(
                 "\n        A new verification link has been sent to the email address you provided during registration.\n    "
-              )
+              ),
             ]
           )
         : _vm._e(),
@@ -37255,11 +41142,11 @@ var render = function() {
         "form",
         {
           on: {
-            submit: function($event) {
+            submit: function ($event) {
               $event.preventDefault()
               return _vm.submit.apply(null, arguments)
-            }
-          }
+            },
+          },
         },
         [
           _c(
@@ -37270,12 +41157,12 @@ var render = function() {
                 "jet-button",
                 {
                   class: { "opacity-25": _vm.form.processing },
-                  attrs: { disabled: _vm.form.processing }
+                  attrs: { disabled: _vm.form.processing },
                 },
                 [
                   _vm._v(
                     "\n                Resend Verification Email\n            "
-                  )
+                  ),
                 ]
               ),
               _vm._v(" "),
@@ -37287,16 +41174,16 @@ var render = function() {
                   attrs: {
                     href: _vm.route("logout"),
                     method: "post",
-                    as: "button"
-                  }
+                    as: "button",
+                  },
                 },
                 [_vm._v("Logout")]
-              )
+              ),
             ],
             1
-          )
+          ),
         ]
-      )
+      ),
     ]
   )
 }
@@ -37319,7 +41206,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -37329,18 +41216,18 @@ var render = function() {
         "div",
         [
           _c("update-information", {
-            attrs: { shop: _vm.$page.props.userShop }
+            attrs: { shop: _vm.$page.props.userShop },
           }),
           _vm._v(" "),
           _c("jet-section-border"),
           _vm._v(" "),
           _c("update-location", { attrs: { shop: _vm.$page.props.userShop } }),
           _vm._v(" "),
-          _c("jet-section-border")
+          _c("jet-section-border"),
         ],
         1
-      )
-    ])
+      ),
+    ]),
   ])
 }
 var staticRenderFns = []
@@ -37362,7 +41249,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -37387,7 +41274,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -37410,13 +41297,13 @@ var render = function() {
                   {
                     staticClass:
                       "mt-4 py-2 px-4 border border-transparent shadow-sm text-sm rounded-md font-bold text-white bg-indigo-400 hover:bg-indigo-700",
-                    attrs: { href: _vm.route("edit-shop") }
+                    attrs: { href: _vm.route("edit-shop") },
                   },
                   [_vm._v("\n                Edit Shop\n            ")]
-                )
+                ),
               ],
               1
-            )
+            ),
           ],
           1
         )
@@ -37429,15 +41316,15 @@ var render = function() {
               staticClass:
                 "mt-4 py-2 px-4 border border-transparent shadow-sm text-sm rounded-md font-bold text-white bg-indigo-400 hover:bg-indigo-700",
               on: {
-                click: function($event) {
+                click: function ($event) {
                   $event.preventDefault()
                   return _vm.createShop()
-                }
-              }
+                },
+              },
             },
             [_vm._v("\n            Create Shop\n        ")]
-          )
-        ])
+          ),
+        ]),
   ])
 }
 var staticRenderFns = []
@@ -37459,7 +41346,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -37474,11 +41361,11 @@ var render = function() {
           _c("div", {
             staticClass:
               "w-full sm:max-w-2xl mt-6 p-6 bg-white shadow-md overflow-hidden sm:rounded-lg prose",
-            domProps: { innerHTML: _vm._s(_vm.policy) }
-          })
+            domProps: { innerHTML: _vm._s(_vm.policy) },
+          }),
         ]
-      )
-    ])
+      ),
+    ]),
   ])
 }
 var staticRenderFns = []
@@ -37500,7 +41387,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -37508,26 +41395,26 @@ var render = function() {
     scopedSlots: _vm._u([
       {
         key: "title",
-        fn: function() {
+        fn: function () {
           return [_vm._v("\n        Delete Account\n    ")]
         },
-        proxy: true
+        proxy: true,
       },
       {
         key: "description",
-        fn: function() {
+        fn: function () {
           return [_vm._v("\n        Permanently delete your account.\n    ")]
         },
-        proxy: true
+        proxy: true,
       },
       {
         key: "content",
-        fn: function() {
+        fn: function () {
           return [
             _c("div", { staticClass: "max-w-xl text-sm text-gray-600" }, [
               _vm._v(
                 "\n            Once your account is deleted, all of its resources and data will be permanently deleted. Before deleting your account, please download any data or information that you wish to retain.\n        "
-              )
+              ),
             ]),
             _vm._v(" "),
             _c(
@@ -37538,13 +41425,13 @@ var render = function() {
                   "jet-danger-button",
                   {
                     nativeOn: {
-                      click: function($event) {
+                      click: function ($event) {
                         return _vm.confirmUserDeletion.apply(null, arguments)
-                      }
-                    }
+                      },
+                    },
                   },
                   [_vm._v("\n                Delete Account\n            ")]
-                )
+                ),
               ],
               1
             ),
@@ -37555,16 +41442,16 @@ var render = function() {
               scopedSlots: _vm._u([
                 {
                   key: "title",
-                  fn: function() {
+                  fn: function () {
                     return [
-                      _vm._v("\n                Delete Account\n            ")
+                      _vm._v("\n                Delete Account\n            "),
                     ]
                   },
-                  proxy: true
+                  proxy: true,
                 },
                 {
                   key: "content",
-                  fn: function() {
+                  fn: function () {
                     return [
                       _vm._v(
                         "\n                Are you sure you want to delete your account? Once your account is deleted, all of its resources and data will be permanently deleted. Please enter your password to confirm you would like to permanently delete your account.\n\n                "
@@ -37578,10 +41465,10 @@ var render = function() {
                             staticClass: "mt-1 block w-3/4",
                             attrs: {
                               type: "password",
-                              placeholder: "Password"
+                              placeholder: "Password",
                             },
                             nativeOn: {
-                              keyup: function($event) {
+                              keyup: function ($event) {
                                 if (
                                   !$event.type.indexOf("key") &&
                                   _vm._k(
@@ -37595,45 +41482,45 @@ var render = function() {
                                   return null
                                 }
                                 return _vm.deleteUser.apply(null, arguments)
-                              }
+                              },
                             },
                             model: {
                               value: _vm.form.password,
-                              callback: function($$v) {
+                              callback: function ($$v) {
                                 _vm.$set(_vm.form, "password", $$v)
                               },
-                              expression: "form.password"
-                            }
+                              expression: "form.password",
+                            },
                           }),
                           _vm._v(" "),
                           _c("jet-input-error", {
                             staticClass: "mt-2",
-                            attrs: { message: _vm.form.errors.password }
-                          })
+                            attrs: { message: _vm.form.errors.password },
+                          }),
                         ],
                         1
-                      )
+                      ),
                     ]
                   },
-                  proxy: true
+                  proxy: true,
                 },
                 {
                   key: "footer",
-                  fn: function() {
+                  fn: function () {
                     return [
                       _c(
                         "jet-secondary-button",
                         {
                           nativeOn: {
-                            click: function($event) {
+                            click: function ($event) {
                               return _vm.closeModal.apply(null, arguments)
-                            }
-                          }
+                            },
+                          },
                         },
                         [
                           _vm._v(
                             "\n                    Nevermind\n                "
-                          )
+                          ),
                         ]
                       ),
                       _vm._v(" "),
@@ -37644,28 +41531,28 @@ var render = function() {
                           class: { "opacity-25": _vm.form.processing },
                           attrs: { disabled: _vm.form.processing },
                           nativeOn: {
-                            click: function($event) {
+                            click: function ($event) {
                               return _vm.deleteUser.apply(null, arguments)
-                            }
-                          }
+                            },
+                          },
                         },
                         [
                           _vm._v(
                             "\n                    Delete Account\n                "
-                          )
+                          ),
                         ]
-                      )
+                      ),
                     ]
                   },
-                  proxy: true
-                }
-              ])
-            })
+                  proxy: true,
+                },
+              ]),
+            }),
           ]
         },
-        proxy: true
-      }
-    ])
+        proxy: true,
+      },
+    ]),
   })
 }
 var staticRenderFns = []
@@ -37687,7 +41574,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -37695,37 +41582,37 @@ var render = function() {
     scopedSlots: _vm._u([
       {
         key: "title",
-        fn: function() {
+        fn: function () {
           return [_vm._v("\n        Browser Sessions\n    ")]
         },
-        proxy: true
+        proxy: true,
       },
       {
         key: "description",
-        fn: function() {
+        fn: function () {
           return [
             _vm._v(
               "\n        Manage and logout your active sessions on other browsers and devices.\n    "
-            )
+            ),
           ]
         },
-        proxy: true
+        proxy: true,
       },
       {
         key: "content",
-        fn: function() {
+        fn: function () {
           return [
             _c("div", { staticClass: "max-w-xl text-sm text-gray-600" }, [
               _vm._v(
                 "\n            If necessary, you may logout of all of your other browser sessions across all of your devices. Some of your recent sessions are listed below; however, this list may not be exhaustive. If you feel your account has been compromised, you should also update your password.\n        "
-              )
+              ),
             ]),
             _vm._v(" "),
             _vm.sessions.length > 0
               ? _c(
                   "div",
                   { staticClass: "mt-5 space-y-6" },
-                  _vm._l(_vm.sessions, function(session, i) {
+                  _vm._l(_vm.sessions, function (session, i) {
                     return _c(
                       "div",
                       { key: i, staticClass: "flex items-center" },
@@ -37742,16 +41629,15 @@ var render = function() {
                                     "stroke-linejoin": "round",
                                     "stroke-width": "2",
                                     viewBox: "0 0 24 24",
-                                    stroke: "currentColor"
-                                  }
+                                    stroke: "currentColor",
+                                  },
                                 },
                                 [
                                   _c("path", {
                                     attrs: {
-                                      d:
-                                        "M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                                    }
-                                  })
+                                      d: "M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z",
+                                    },
+                                  }),
                                 ]
                               )
                             : _c(
@@ -37765,15 +41651,15 @@ var render = function() {
                                     stroke: "currentColor",
                                     fill: "none",
                                     "stroke-linecap": "round",
-                                    "stroke-linejoin": "round"
-                                  }
+                                    "stroke-linejoin": "round",
+                                  },
                                 },
                                 [
                                   _c("path", {
                                     attrs: {
                                       d: "M0 0h24v24H0z",
-                                      stroke: "none"
-                                    }
+                                      stroke: "none",
+                                    },
                                   }),
                                   _c("rect", {
                                     attrs: {
@@ -37781,14 +41667,14 @@ var render = function() {
                                       y: "4",
                                       width: "10",
                                       height: "16",
-                                      rx: "1"
-                                    }
+                                      rx: "1",
+                                    },
                                   }),
                                   _c("path", {
-                                    attrs: { d: "M11 5h2M12 17v.01" }
-                                  })
+                                    attrs: { d: "M11 5h2M12 17v.01" },
+                                  }),
                                 ]
-                              )
+                              ),
                         ]),
                         _vm._v(" "),
                         _c("div", { staticClass: "ml-3" }, [
@@ -37799,7 +41685,7 @@ var render = function() {
                                 " - " +
                                 _vm._s(session.agent.browser) +
                                 "\n                    "
-                            )
+                            ),
                           ]),
                           _vm._v(" "),
                           _c("div", [
@@ -37817,7 +41703,7 @@ var render = function() {
                                       "span",
                                       {
                                         staticClass:
-                                          "text-green-500 font-semibold"
+                                          "text-green-500 font-semibold",
                                       },
                                       [_vm._v("This device")]
                                     )
@@ -37825,12 +41711,12 @@ var render = function() {
                                       _vm._v(
                                         "Last active " +
                                           _vm._s(session.last_active)
-                                      )
-                                    ])
+                                      ),
+                                    ]),
                               ]
-                            )
-                          ])
-                        ])
+                            ),
+                          ]),
+                        ]),
                       ]
                     )
                   }),
@@ -37846,15 +41732,15 @@ var render = function() {
                   "jet-button",
                   {
                     nativeOn: {
-                      click: function($event) {
+                      click: function ($event) {
                         return _vm.confirmLogout.apply(null, arguments)
-                      }
-                    }
+                      },
+                    },
                   },
                   [
                     _vm._v(
                       "\n                Logout Other Browser Sessions\n            "
-                    )
+                    ),
                   ]
                 ),
                 _vm._v(" "),
@@ -37862,10 +41748,10 @@ var render = function() {
                   "jet-action-message",
                   {
                     staticClass: "ml-3",
-                    attrs: { on: _vm.form.recentlySuccessful }
+                    attrs: { on: _vm.form.recentlySuccessful },
                   },
                   [_vm._v("\n                Done.\n            ")]
-                )
+                ),
               ],
               1
             ),
@@ -37876,18 +41762,18 @@ var render = function() {
               scopedSlots: _vm._u([
                 {
                   key: "title",
-                  fn: function() {
+                  fn: function () {
                     return [
                       _vm._v(
                         "\n                Logout Other Browser Sessions\n            "
-                      )
+                      ),
                     ]
                   },
-                  proxy: true
+                  proxy: true,
                 },
                 {
                   key: "content",
-                  fn: function() {
+                  fn: function () {
                     return [
                       _vm._v(
                         "\n                Please enter your password to confirm you would like to logout of your other browser sessions across all of your devices.\n\n                "
@@ -37901,10 +41787,10 @@ var render = function() {
                             staticClass: "mt-1 block w-3/4",
                             attrs: {
                               type: "password",
-                              placeholder: "Password"
+                              placeholder: "Password",
                             },
                             nativeOn: {
-                              keyup: function($event) {
+                              keyup: function ($event) {
                                 if (
                                   !$event.type.indexOf("key") &&
                                   _vm._k(
@@ -37921,45 +41807,45 @@ var render = function() {
                                   null,
                                   arguments
                                 )
-                              }
+                              },
                             },
                             model: {
                               value: _vm.form.password,
-                              callback: function($$v) {
+                              callback: function ($$v) {
                                 _vm.$set(_vm.form, "password", $$v)
                               },
-                              expression: "form.password"
-                            }
+                              expression: "form.password",
+                            },
                           }),
                           _vm._v(" "),
                           _c("jet-input-error", {
                             staticClass: "mt-2",
-                            attrs: { message: _vm.form.errors.password }
-                          })
+                            attrs: { message: _vm.form.errors.password },
+                          }),
                         ],
                         1
-                      )
+                      ),
                     ]
                   },
-                  proxy: true
+                  proxy: true,
                 },
                 {
                   key: "footer",
-                  fn: function() {
+                  fn: function () {
                     return [
                       _c(
                         "jet-secondary-button",
                         {
                           nativeOn: {
-                            click: function($event) {
+                            click: function ($event) {
                               return _vm.closeModal.apply(null, arguments)
-                            }
-                          }
+                            },
+                          },
                         },
                         [
                           _vm._v(
                             "\n                    Nevermind\n                "
-                          )
+                          ),
                         ]
                       ),
                       _vm._v(" "),
@@ -37970,31 +41856,31 @@ var render = function() {
                           class: { "opacity-25": _vm.form.processing },
                           attrs: { disabled: _vm.form.processing },
                           nativeOn: {
-                            click: function($event) {
+                            click: function ($event) {
                               return _vm.logoutOtherBrowserSessions.apply(
                                 null,
                                 arguments
                               )
-                            }
-                          }
+                            },
+                          },
                         },
                         [
                           _vm._v(
                             "\n                    Logout Other Browser Sessions\n                "
-                          )
+                          ),
                         ]
-                      )
+                      ),
                     ]
                   },
-                  proxy: true
-                }
-              ])
-            })
+                  proxy: true,
+                },
+              ]),
+            }),
           ]
         },
-        proxy: true
-      }
-    ])
+        proxy: true,
+      },
+    ]),
   })
 }
 var staticRenderFns = []
@@ -38016,7 +41902,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -38026,21 +41912,21 @@ var render = function() {
       scopedSlots: _vm._u([
         {
           key: "header",
-          fn: function() {
+          fn: function () {
             return [
               _c(
                 "h2",
                 {
                   staticClass:
-                    "font-semibold text-xl text-gray-800 leading-tight"
+                    "font-semibold text-xl text-gray-800 leading-tight",
                 },
                 [_vm._v("\n            Profile\n        ")]
-              )
+              ),
             ]
           },
-          proxy: true
-        }
-      ])
+          proxy: true,
+        },
+      ]),
     },
     [
       _vm._v(" "),
@@ -38054,10 +41940,10 @@ var render = function() {
                   "div",
                   [
                     _c("update-profile-information-form", {
-                      attrs: { user: _vm.$page.props.user }
+                      attrs: { user: _vm.$page.props.user },
                     }),
                     _vm._v(" "),
-                    _c("jet-section-border")
+                    _c("jet-section-border"),
                   ],
                   1
                 )
@@ -38068,10 +41954,10 @@ var render = function() {
                   "div",
                   [
                     _c("update-password-form", {
-                      staticClass: "mt-10 sm:mt-0"
+                      staticClass: "mt-10 sm:mt-0",
                     }),
                     _vm._v(" "),
-                    _c("jet-section-border")
+                    _c("jet-section-border"),
                   ],
                   1
                 )
@@ -38082,10 +41968,10 @@ var render = function() {
                   "div",
                   [
                     _c("two-factor-authentication-form", {
-                      staticClass: "mt-10 sm:mt-0"
+                      staticClass: "mt-10 sm:mt-0",
                     }),
                     _vm._v(" "),
-                    _c("jet-section-border")
+                    _c("jet-section-border"),
                   ],
                   1
                 )
@@ -38093,20 +41979,20 @@ var render = function() {
             _vm._v(" "),
             _c("logout-other-browser-sessions-form", {
               staticClass: "mt-10 sm:mt-0",
-              attrs: { sessions: _vm.sessions }
+              attrs: { sessions: _vm.sessions },
             }),
             _vm._v(" "),
             _vm.$page.props.jetstream.hasAccountDeletionFeatures
               ? [
                   _c("jet-section-border"),
                   _vm._v(" "),
-                  _c("delete-user-form", { staticClass: "mt-10 sm:mt-0" })
+                  _c("delete-user-form", { staticClass: "mt-10 sm:mt-0" }),
                 ]
-              : _vm._e()
+              : _vm._e(),
           ],
           2
-        )
-      ])
+        ),
+      ]),
     ]
   )
 }
@@ -38129,7 +42015,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -38137,44 +42023,44 @@ var render = function() {
     scopedSlots: _vm._u([
       {
         key: "title",
-        fn: function() {
+        fn: function () {
           return [_vm._v("\n        Two Factor Authentication\n    ")]
         },
-        proxy: true
+        proxy: true,
       },
       {
         key: "description",
-        fn: function() {
+        fn: function () {
           return [
             _vm._v(
               "\n        Add additional security to your account using two factor authentication.\n    "
-            )
+            ),
           ]
         },
-        proxy: true
+        proxy: true,
       },
       {
         key: "content",
-        fn: function() {
+        fn: function () {
           return [
             _vm.twoFactorEnabled
               ? _c("h3", { staticClass: "text-lg font-medium text-gray-900" }, [
                   _vm._v(
                     "\n            You have enabled two factor authentication.\n        "
-                  )
+                  ),
                 ])
               : _c("h3", { staticClass: "text-lg font-medium text-gray-900" }, [
                   _vm._v(
                     "\n            You have not enabled two factor authentication.\n        "
-                  )
+                  ),
                 ]),
             _vm._v(" "),
             _c("div", { staticClass: "mt-3 max-w-xl text-sm text-gray-600" }, [
               _c("p", [
                 _vm._v(
                   "\n                When two factor authentication is enabled, you will be prompted for a secure, random token during authentication. You may retrieve this token from your phone's Google Authenticator application.\n            "
-                )
-              ])
+                ),
+              ]),
             ]),
             _vm._v(" "),
             _vm.twoFactorEnabled
@@ -38184,21 +42070,21 @@ var render = function() {
                         _c(
                           "div",
                           {
-                            staticClass: "mt-4 max-w-xl text-sm text-gray-600"
+                            staticClass: "mt-4 max-w-xl text-sm text-gray-600",
                           },
                           [
                             _c("p", { staticClass: "font-semibold" }, [
                               _vm._v(
                                 "\n                        Two factor authentication is now enabled. Scan the following QR code using your phone's authenticator application.\n                    "
-                              )
-                            ])
+                              ),
+                            ]),
                           ]
                         ),
                         _vm._v(" "),
                         _c("div", {
                           staticClass: "mt-4 dark:p-4 dark:w-56 dark:bg-white",
-                          domProps: { innerHTML: _vm._s(_vm.qrCode) }
-                        })
+                          domProps: { innerHTML: _vm._s(_vm.qrCode) },
+                        }),
                       ])
                     : _vm._e(),
                   _vm._v(" "),
@@ -38207,14 +42093,14 @@ var render = function() {
                         _c(
                           "div",
                           {
-                            staticClass: "mt-4 max-w-xl text-sm text-gray-600"
+                            staticClass: "mt-4 max-w-xl text-sm text-gray-600",
                           },
                           [
                             _c("p", { staticClass: "font-semibold" }, [
                               _vm._v(
                                 "\n                        Store these recovery codes in a secure password manager. They can be used to recover access to your account if your two factor authentication device is lost.\n                    "
-                              )
-                            ])
+                              ),
+                            ]),
                           ]
                         ),
                         _vm._v(" "),
@@ -38222,21 +42108,21 @@ var render = function() {
                           "div",
                           {
                             staticClass:
-                              "grid gap-1 max-w-xl mt-4 px-4 py-4 font-mono text-sm bg-gray-100 rounded-lg"
+                              "grid gap-1 max-w-xl mt-4 px-4 py-4 font-mono text-sm bg-gray-100 rounded-lg",
                           },
-                          _vm._l(_vm.recoveryCodes, function(code) {
+                          _vm._l(_vm.recoveryCodes, function (code) {
                             return _c("div", { key: code }, [
                               _vm._v(
                                 "\n                        " +
                                   _vm._s(code) +
                                   "\n                    "
-                              )
+                              ),
                             ])
                           }),
                           0
-                        )
+                        ),
                       ])
-                    : _vm._e()
+                    : _vm._e(),
                 ])
               : _vm._e(),
             _vm._v(" "),
@@ -38248,24 +42134,24 @@ var render = function() {
                       _c(
                         "jet-confirms-password",
                         {
-                          on: { confirmed: _vm.enableTwoFactorAuthentication }
+                          on: { confirmed: _vm.enableTwoFactorAuthentication },
                         },
                         [
                           _c(
                             "jet-button",
                             {
                               class: { "opacity-25": _vm.enabling },
-                              attrs: { type: "button", disabled: _vm.enabling }
+                              attrs: { type: "button", disabled: _vm.enabling },
                             },
                             [
                               _vm._v(
                                 "\n                        Enable\n                    "
-                              )
+                              ),
                             ]
-                          )
+                          ),
                         ],
                         1
-                      )
+                      ),
                     ],
                     1
                   )
@@ -38283,10 +42169,10 @@ var render = function() {
                                 [
                                   _vm._v(
                                     "\n                        Regenerate Recovery Codes\n                    "
-                                  )
+                                  ),
                                 ]
                               )
-                            : _vm._e()
+                            : _vm._e(),
                         ],
                         1
                       ),
@@ -38302,10 +42188,10 @@ var render = function() {
                                 [
                                   _vm._v(
                                     "\n                        Show Recovery Codes\n                    "
-                                  )
+                                  ),
                                 ]
                               )
-                            : _vm._e()
+                            : _vm._e(),
                         ],
                         1
                       ),
@@ -38313,33 +42199,33 @@ var render = function() {
                       _c(
                         "jet-confirms-password",
                         {
-                          on: { confirmed: _vm.disableTwoFactorAuthentication }
+                          on: { confirmed: _vm.disableTwoFactorAuthentication },
                         },
                         [
                           _c(
                             "jet-danger-button",
                             {
                               class: { "opacity-25": _vm.disabling },
-                              attrs: { disabled: _vm.disabling }
+                              attrs: { disabled: _vm.disabling },
                             },
                             [
                               _vm._v(
                                 "\n                        Disable\n                    "
-                              )
+                              ),
                             ]
-                          )
+                          ),
                         ],
                         1
-                      )
+                      ),
                     ],
                     1
-                  )
-            ])
+                  ),
+            ]),
           ]
         },
-        proxy: true
-      }
-    ])
+        proxy: true,
+      },
+    ]),
   })
 }
 var staticRenderFns = []
@@ -38361,7 +42247,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -38370,32 +42256,32 @@ var render = function() {
     scopedSlots: _vm._u([
       {
         key: "title",
-        fn: function() {
+        fn: function () {
           return [_vm._v("\n        Update Password\n    ")]
         },
-        proxy: true
+        proxy: true,
       },
       {
         key: "description",
-        fn: function() {
+        fn: function () {
           return [
             _vm._v(
               "\n        Ensure your account is using a long, random password to stay secure.\n    "
-            )
+            ),
           ]
         },
-        proxy: true
+        proxy: true,
       },
       {
         key: "form",
-        fn: function() {
+        fn: function () {
           return [
             _c(
               "div",
               { staticClass: "col-span-6 sm:col-span-4" },
               [
                 _c("jet-label", {
-                  attrs: { for: "current_password", value: "Current Password" }
+                  attrs: { for: "current_password", value: "Current Password" },
                 }),
                 _vm._v(" "),
                 _c("jet-input", {
@@ -38404,21 +42290,21 @@ var render = function() {
                   attrs: {
                     id: "current_password",
                     type: "password",
-                    autocomplete: "current-password"
+                    autocomplete: "current-password",
                   },
                   model: {
                     value: _vm.form.current_password,
-                    callback: function($$v) {
+                    callback: function ($$v) {
                       _vm.$set(_vm.form, "current_password", $$v)
                     },
-                    expression: "form.current_password"
-                  }
+                    expression: "form.current_password",
+                  },
                 }),
                 _vm._v(" "),
                 _c("jet-input-error", {
                   staticClass: "mt-2",
-                  attrs: { message: _vm.form.errors.current_password }
-                })
+                  attrs: { message: _vm.form.errors.current_password },
+                }),
               ],
               1
             ),
@@ -38428,7 +42314,7 @@ var render = function() {
               { staticClass: "col-span-6 sm:col-span-4" },
               [
                 _c("jet-label", {
-                  attrs: { for: "password", value: "New Password" }
+                  attrs: { for: "password", value: "New Password" },
                 }),
                 _vm._v(" "),
                 _c("jet-input", {
@@ -38437,21 +42323,21 @@ var render = function() {
                   attrs: {
                     id: "password",
                     type: "password",
-                    autocomplete: "new-password"
+                    autocomplete: "new-password",
                   },
                   model: {
                     value: _vm.form.password,
-                    callback: function($$v) {
+                    callback: function ($$v) {
                       _vm.$set(_vm.form, "password", $$v)
                     },
-                    expression: "form.password"
-                  }
+                    expression: "form.password",
+                  },
                 }),
                 _vm._v(" "),
                 _c("jet-input-error", {
                   staticClass: "mt-2",
-                  attrs: { message: _vm.form.errors.password }
-                })
+                  attrs: { message: _vm.form.errors.password },
+                }),
               ],
               1
             ),
@@ -38463,8 +42349,8 @@ var render = function() {
                 _c("jet-label", {
                   attrs: {
                     for: "password_confirmation",
-                    value: "Confirm Password"
-                  }
+                    value: "Confirm Password",
+                  },
                 }),
                 _vm._v(" "),
                 _c("jet-input", {
@@ -38472,37 +42358,37 @@ var render = function() {
                   attrs: {
                     id: "password_confirmation",
                     type: "password",
-                    autocomplete: "new-password"
+                    autocomplete: "new-password",
                   },
                   model: {
                     value: _vm.form.password_confirmation,
-                    callback: function($$v) {
+                    callback: function ($$v) {
                       _vm.$set(_vm.form, "password_confirmation", $$v)
                     },
-                    expression: "form.password_confirmation"
-                  }
+                    expression: "form.password_confirmation",
+                  },
                 }),
                 _vm._v(" "),
                 _c("jet-input-error", {
                   staticClass: "mt-2",
-                  attrs: { message: _vm.form.errors.password_confirmation }
-                })
+                  attrs: { message: _vm.form.errors.password_confirmation },
+                }),
               ],
               1
-            )
+            ),
           ]
         },
-        proxy: true
+        proxy: true,
       },
       {
         key: "actions",
-        fn: function() {
+        fn: function () {
           return [
             _c(
               "jet-action-message",
               {
                 staticClass: "mr-3",
-                attrs: { on: _vm.form.recentlySuccessful }
+                attrs: { on: _vm.form.recentlySuccessful },
               },
               [_vm._v("\n            Saved.\n        ")]
             ),
@@ -38511,15 +42397,15 @@ var render = function() {
               "jet-button",
               {
                 class: { "opacity-25": _vm.form.processing },
-                attrs: { disabled: _vm.form.processing }
+                attrs: { disabled: _vm.form.processing },
               },
               [_vm._v("\n            Save\n        ")]
-            )
+            ),
           ]
         },
-        proxy: true
-      }
-    ])
+        proxy: true,
+      },
+    ]),
   })
 }
 var staticRenderFns = []
@@ -38541,7 +42427,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -38550,25 +42436,25 @@ var render = function() {
     scopedSlots: _vm._u([
       {
         key: "title",
-        fn: function() {
+        fn: function () {
           return [_vm._v("\n        Profile Information\n    ")]
         },
-        proxy: true
+        proxy: true,
       },
       {
         key: "description",
-        fn: function() {
+        fn: function () {
           return [
             _vm._v(
               "\n        Update your account's profile information and email address.\n    "
-            )
+            ),
           ]
         },
-        proxy: true
+        proxy: true,
       },
       {
         key: "form",
-        fn: function() {
+        fn: function () {
           return [
             _vm.$page.props.jetstream.managesProfilePhotos
               ? _c(
@@ -38579,11 +42465,11 @@ var render = function() {
                       ref: "photo",
                       staticClass: "hidden",
                       attrs: { type: "file" },
-                      on: { change: _vm.updatePhotoPreview }
+                      on: { change: _vm.updatePhotoPreview },
                     }),
                     _vm._v(" "),
                     _c("jet-label", {
-                      attrs: { for: "photo", value: "Photo" }
+                      attrs: { for: "photo", value: "Photo" },
                     }),
                     _vm._v(" "),
                     _c(
@@ -38594,19 +42480,19 @@ var render = function() {
                             name: "show",
                             rawName: "v-show",
                             value: !_vm.photoPreview,
-                            expression: "! photoPreview"
-                          }
+                            expression: "! photoPreview",
+                          },
                         ],
-                        staticClass: "mt-2"
+                        staticClass: "mt-2",
                       },
                       [
                         _c("img", {
                           staticClass: "rounded-full h-20 w-20 object-cover",
                           attrs: {
                             src: _vm.user.profile_photo_url,
-                            alt: _vm.user.name
-                          }
-                        })
+                            alt: _vm.user.name,
+                          },
+                        }),
                       ]
                     ),
                     _vm._v(" "),
@@ -38618,10 +42504,10 @@ var render = function() {
                             name: "show",
                             rawName: "v-show",
                             value: _vm.photoPreview,
-                            expression: "photoPreview"
-                          }
+                            expression: "photoPreview",
+                          },
                         ],
-                        staticClass: "mt-2"
+                        staticClass: "mt-2",
                       },
                       [
                         _c("span", {
@@ -38629,8 +42515,8 @@ var render = function() {
                           style:
                             "background-size: cover; background-repeat: no-repeat; background-position: center center; background-image: url('" +
                             _vm.photoPreview +
-                            "');"
-                        })
+                            "');",
+                        }),
                       ]
                     ),
                     _vm._v(" "),
@@ -38640,16 +42526,16 @@ var render = function() {
                         staticClass: "mt-2 mr-2",
                         attrs: { type: "button" },
                         nativeOn: {
-                          click: function($event) {
+                          click: function ($event) {
                             $event.preventDefault()
                             return _vm.selectNewPhoto.apply(null, arguments)
-                          }
-                        }
+                          },
+                        },
                       },
                       [
                         _vm._v(
                           "\n                Select A New Photo\n            "
-                        )
+                        ),
                       ]
                     ),
                     _vm._v(" "),
@@ -38660,24 +42546,24 @@ var render = function() {
                             staticClass: "mt-2",
                             attrs: { type: "button" },
                             nativeOn: {
-                              click: function($event) {
+                              click: function ($event) {
                                 $event.preventDefault()
                                 return _vm.deletePhoto.apply(null, arguments)
-                              }
-                            }
+                              },
+                            },
                           },
                           [
                             _vm._v(
                               "\n                Remove Photo\n            "
-                            )
+                            ),
                           ]
                         )
                       : _vm._e(),
                     _vm._v(" "),
                     _c("jet-input-error", {
                       staticClass: "mt-2",
-                      attrs: { message: _vm.form.errors.photo }
-                    })
+                      attrs: { message: _vm.form.errors.photo },
+                    }),
                   ],
                   1
                 )
@@ -38694,17 +42580,17 @@ var render = function() {
                   attrs: { id: "name", type: "text", autocomplete: "name" },
                   model: {
                     value: _vm.form.name,
-                    callback: function($$v) {
+                    callback: function ($$v) {
                       _vm.$set(_vm.form, "name", $$v)
                     },
-                    expression: "form.name"
-                  }
+                    expression: "form.name",
+                  },
                 }),
                 _vm._v(" "),
                 _c("jet-input-error", {
                   staticClass: "mt-2",
-                  attrs: { message: _vm.form.errors.name }
-                })
+                  attrs: { message: _vm.form.errors.name },
+                }),
               ],
               1
             ),
@@ -38720,33 +42606,33 @@ var render = function() {
                   attrs: { id: "email", type: "email" },
                   model: {
                     value: _vm.form.email,
-                    callback: function($$v) {
+                    callback: function ($$v) {
                       _vm.$set(_vm.form, "email", $$v)
                     },
-                    expression: "form.email"
-                  }
+                    expression: "form.email",
+                  },
                 }),
                 _vm._v(" "),
                 _c("jet-input-error", {
                   staticClass: "mt-2",
-                  attrs: { message: _vm.form.errors.email }
-                })
+                  attrs: { message: _vm.form.errors.email },
+                }),
               ],
               1
-            )
+            ),
           ]
         },
-        proxy: true
+        proxy: true,
       },
       {
         key: "actions",
-        fn: function() {
+        fn: function () {
           return [
             _c(
               "jet-action-message",
               {
                 staticClass: "mr-3",
-                attrs: { on: _vm.form.recentlySuccessful }
+                attrs: { on: _vm.form.recentlySuccessful },
               },
               [_vm._v("\n            Saved.\n        ")]
             ),
@@ -38755,15 +42641,15 @@ var render = function() {
               "jet-button",
               {
                 class: { "opacity-25": _vm.form.processing },
-                attrs: { disabled: _vm.form.processing }
+                attrs: { disabled: _vm.form.processing },
               },
               [_vm._v("\n            Save\n        ")]
-            )
+            ),
           ]
         },
-        proxy: true
-      }
-    ])
+        proxy: true,
+      },
+    ]),
   })
 }
 var staticRenderFns = []
@@ -38785,7 +42671,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "render": () => (/* binding */ render),
 /* harmony export */   "staticRenderFns": () => (/* binding */ staticRenderFns)
 /* harmony export */ });
-var render = function() {
+var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
@@ -38800,11 +42686,11 @@ var render = function() {
           _c("div", {
             staticClass:
               "w-full sm:max-w-2xl mt-6 p-6 bg-white shadow-md overflow-hidden sm:rounded-lg prose",
-            domProps: { innerHTML: _vm._s(_vm.terms) }
-          })
+            domProps: { innerHTML: _vm._s(_vm.terms) },
+          }),
         ]
-      )
-    ])
+      ),
+    ]),
   ])
 }
 var staticRenderFns = []
@@ -50798,7 +54684,7 @@ exports["default"] = (0, _mapElementFactory2.default)({
 
 /***/ }),
 
-/***/ "./node_modules/vue2-google-maps/dist/components/placeInputImpl.js?vue&type=script&lang=js&?0c5e":
+/***/ "./node_modules/vue2-google-maps/dist/components/placeInputImpl.js?vue&type=script&lang=js&?0ebb":
 /*!**************************************************************************************************!*\
   !*** ./node_modules/vue2-google-maps/dist/components/placeInputImpl.js?vue&type=script&lang=js& ***!
   \**************************************************************************************************/
@@ -64213,7 +68099,7 @@ webpackContext.id = "./resources/js/Pages sync recursive ^\\.\\/.*$";
 
 /***/ }),
 
-/***/ "?4f7e":
+/***/ "?2128":
 /*!********************************!*\
   !*** ./util.inspect (ignored) ***!
   \********************************/
