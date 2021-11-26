@@ -3,7 +3,7 @@
         <div class="text-center border-b-2">Appointment Time And NAME HERE</div>
 
         <div v-if="selected.chat.messages.length > 0">
-            <h1 :class="{'text-right': index % 2 === 0}" v-for="(message, index) in selected.chat.messages" :key="index">{{message}}</h1>
+            <h1 :class="{'text-right': user.id != message.sender_id}" v-for="(message, index) in selected.chat.messages" :key="index">{{message.body}}</h1>
         </div>
 
         <div>
@@ -19,7 +19,8 @@
         name: 'Chat',
 
         props: {
-            selected: Object
+            selected: Object,
+            user: Object
         },
 
         data() {
@@ -30,7 +31,10 @@
 
         methods: {
             sendMessage() {
-                this.selected.chat.messages.push(this.message)
+                this.selected.chat.messages.push({
+                    body: this.message,
+                    sender_id: this.user.id,
+                })
 
                 this.message = null
 
@@ -38,9 +42,7 @@
             },
 
             updateMessages() {
-                axios.patch(route('chat.update', this.selected.chat.id), {
-                    body: this.selected
-                }).catch(() => {
+                axios.patch(route('chat.update', this.selected.chat.id), this.selected).catch(() => {
                     console.log('Failed to update chat messages in database!')
                 })
             }

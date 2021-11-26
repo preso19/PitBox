@@ -107,16 +107,14 @@
         },
 
         mounted() {
-            new Datepicker(this.$refs.datepicker);
+            new Datepicker(this.$refs.datepicker)
         },
 
         methods: {
             createAppointment() {
                 this.form.datetime = this.$refs.datepicker.value
 
-                this.form.post(route('create.appointment'), {
-                    preserveScroll: true
-                });
+                this.$emit('createAppointment', this.form)
             }
         }
 	}

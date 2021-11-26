@@ -12,9 +12,18 @@
             </div>
 
             <div class="p-4 mb-4 bg-white shadow-md rounded-3xl">
-                <appointments-form v-if="$page.props.newAppointment" :newAppointmentShop="newAppointmentShop" :selected="selected"></appointments-form>
+                <appointments-form
+                    v-if="$page.props.newAppointment"
+                    :newAppointmentShop="$page.props.newAppointmentShop"
+                    :selected="selected"
+                    @createAppointment="createAppointment"
+                ></appointments-form>
 
-                <appointments-chat v-if="!$page.props.newAppointment && selected" :selected="selected"></appointments-chat>
+                <appointments-chat
+                    v-if="!$page.props.newAppointment && selected"
+                    :selected="selected"
+                    :user="$page.props.user"
+                ></appointments-chat>
             </div>
         </div>
 
@@ -40,12 +49,6 @@
             AppointmentsChat
         },
 
-        props: {
-            newAppointment: Boolean,
-            userAppointments: Array,
-            newAppointmentShop: Object
-        },
-
         data() {
             return {
                 selected: null,
@@ -53,14 +56,23 @@
         },
 
         mounted() {
-            if (!this.selected) {
-                this.selected = this.userAppointments[0]
+            if (!this.selected && !this.$page.props.newAppointment) {
+                this.selected = this.$page.props.userAppointments[0]
             }
         },
 
         methods: {
+            createAppointment(form) {
+                form.post(route('create.appointment'), {
+                    onSuccess: () => {
+                        this.selected = this.$page.props.userAppointments[0]
+                    },
+                });
+            },
+
             updateSelectedAppointment(appointment) {
                 this.selected = appointment
+                this.$page.props.newAppointment = false
             }
         }
     }

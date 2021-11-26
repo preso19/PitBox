@@ -1,7 +1,11 @@
 <template>
-    <div v-if="selected">
+    <div>
+        <div class="p-4 border-b-2 border-indigo-400 cursor-pointer" v-if="newAppointment">
+            <h2 class="inline font-bold">{{newAppointmentShop.name}}</h2>
+        </div>
+
         <div class="p-4 border-b-2 border-indigo-400 cursor-pointer" v-for="appointment in userAppointments" :key="appointment.id" @click.prevent="updateSelectedAppointment(appointment)">
-            <h2 class="inline" :class="{'font-bold': appointment.id == selected.id}">{{appointment.shop.name}}</h2>
+            <h2 class="inline" :class="{'font-bold': selected && appointment.id == selected.id}">{{appointment.shop.name}}</h2>
 
             <span>- {{filterDate(appointment.datetime)}}</span>
         </div>

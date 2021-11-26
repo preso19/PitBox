@@ -20,6 +20,10 @@ class Message extends Model
         'body'
     ];
 
+    public function sender() {
+        return $this->belongsTo(User::class);
+    }
+
     public function chat() {
         return $this->belongsTo(Chat::class);
     }
