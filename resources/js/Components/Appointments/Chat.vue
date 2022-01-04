@@ -42,7 +42,14 @@
             },
 
             updateMessages() {
-                axios.patch(route('chat.update', this.selected.chat.id), this.selected).catch(() => {
+                axios.patch(route('chat.update', this.selected.chat.id), this.selected)
+                .then(() => {
+                    this.selected.chat.messages.forEach((message, index) => {
+                        message.id = index + 1
+                    })
+                })
+                .catch((error) => {
+                    console.error(error)
                     console.log('Failed to update chat messages in database!')
                 })
             }
