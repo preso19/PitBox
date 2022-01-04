@@ -12,21 +12,20 @@ class ChatController extends Controller
     public function update(Request $request) {
         $data = $request->all();
 
-        $sender = User::findOrFail($data['user_id']);
-
         if (count($data['chat']['messages']) > 0) {
             foreach ($data['chat']['messages'] as $message) {
-                if (!isset($message['id'])) {
-                    $message = Message::create([
+                if (!isset($message['id']) && !isset($message['saved'])) {
+                    $messageModel = Message::create([
                         'body' => $message['body']
                     ]);
 
-                    $message->sender()->associate($sender);
+                    $sender = User::findOrFail($message['sender_id']);
+                    $messageModel->sender()->associate($sender);
 
                     $chat = Chat::findOrFail($data['chat']['id']);
-                    $message->chat()->associate($chat);
+                    $messageModel->chat()->associate($chat);
 
-                    $message->save();
+                    $messageModel->save();
                 }
             }
         }

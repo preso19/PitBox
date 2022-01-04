@@ -1,9 +1,11 @@
 <?php
 
-use Inertia\Inertia;
 use App\Models\Shop;
+use Inertia\Inertia;
+use App\Models\Appointment;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Database\Eloquent\Builder;
 
 /*
 |--------------------------------------------------------------------------
@@ -58,11 +60,22 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     })->name('edit-shop');
 
     Route::get('/appointments', function () {
+        $user = Auth::user();
+        $userRole = $user->roles->pluck('name')->first();
+
+        if ($userRole === 'client') {
+            $userAppointments = $user->appointments()->with(['shop', 'chat', 'chat.messages'])->get();
+        } else {
+            $userAppointments = Appointment::whereHas('shop', function(Builder $query) use ($user) {
+                $query->where('id', '=', $user->shop->id);
+            })->with(['shop', 'chat', 'chat.messages'])->get();
+        }
+
         return Inertia::render('Appointments', [
-            'userAppointments' => Auth::user()->appointments()->with(['shop', 'chat', 'chat.messages'])->get(),
+            'userAppointments' => $userAppointments,
             'newAppointment' => request('new') ? true : false,
             'newAppointmentShop' => Shop::find(request('shop')),
-            'userRole' => Auth::user()->roles->pluck('name')->first(),
+            'userRole' => $userRole,
         ]);
     })->name('appointments');
 });

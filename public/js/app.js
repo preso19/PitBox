@@ -383,6 +383,7 @@ var arrayPrefixGenerators = {
 };
 
 var isArray = Array.isArray;
+var split = String.prototype.split;
 var push = Array.prototype.push;
 var pushToArray = function (arr, valueOrArray) {
     push.apply(arr, isArray(valueOrArray) ? valueOrArray : [valueOrArray]);
@@ -419,6 +420,8 @@ var isNonNullishPrimitive = function isNonNullishPrimitive(v) {
         || typeof v === 'bigint';
 };
 
+var sentinel = {};
+
 var stringify = function stringify(
     object,
     prefix,
@@ -438,8 +441,23 @@ var stringify = function stringify(
 ) {
     var obj = object;
 
-    if (sideChannel.has(object)) {
-        throw new RangeError('Cyclic object value');
+    var tmpSc = sideChannel;
+    var step = 0;
+    var findFlag = false;
+    while ((tmpSc = tmpSc.get(sentinel)) !== undefined && !findFlag) {
+        // Where object last appeared in the ref tree
+        var pos = tmpSc.get(object);
+        step += 1;
+        if (typeof pos !== 'undefined') {
+            if (pos === step) {
+                throw new RangeError('Cyclic object value');
+            } else {
+                findFlag = true; // Break while
+            }
+        }
+        if (typeof tmpSc.get(sentinel) === 'undefined') {
+            step = 0;
+        }
     }
 
     if (typeof filter === 'function') {
@@ -466,6 +484,14 @@ var stringify = function stringify(
     if (isNonNullishPrimitive(obj) || utils.isBuffer(obj)) {
         if (encoder) {
             var keyValue = encodeValuesOnly ? prefix : encoder(prefix, defaults.encoder, charset, 'key', format);
+            if (generateArrayPrefix === 'comma' && encodeValuesOnly) {
+                var valuesArray = split.call(String(obj), ',');
+                var valuesJoined = '';
+                for (var i = 0; i < valuesArray.length; ++i) {
+                    valuesJoined += (i === 0 ? '' : ',') + formatter(encoder(valuesArray[i], defaults.encoder, charset, 'value', format));
+                }
+                return [formatter(keyValue) + '=' + valuesJoined];
+            }
             return [formatter(keyValue) + '=' + formatter(encoder(obj, defaults.encoder, charset, 'value', format))];
         }
         return [formatter(prefix) + '=' + formatter(String(obj))];
@@ -488,8 +514,8 @@ var stringify = function stringify(
         objKeys = sort ? keys.sort(sort) : keys;
     }
 
-    for (var i = 0; i < objKeys.length; ++i) {
-        var key = objKeys[i];
+    for (var j = 0; j < objKeys.length; ++j) {
+        var key = objKeys[j];
         var value = typeof key === 'object' && key.value !== undefined ? key.value : obj[key];
 
         if (skipNulls && value === null) {
@@ -500,8 +526,9 @@ var stringify = function stringify(
             ? typeof generateArrayPrefix === 'function' ? generateArrayPrefix(prefix, key) : prefix
             : prefix + (allowDots ? '.' + key : '[' + key + ']');
 
-        sideChannel.set(object, true);
+        sideChannel.set(object, step);
         var valueSideChannel = getSideChannel();
+        valueSideChannel.set(sentinel, sideChannel);
         pushToArray(values, stringify(
             value,
             keyPrefix,
@@ -842,6 +869,7 @@ var encode = function encode(str, defaultEncoder, charset, kind, format) {
 
         i += 1;
         c = 0x10000 + (((c & 0x3FF) << 10) | (string.charCodeAt(i) & 0x3FF));
+        /* eslint operator-linebreak: [2, "before"] */
         out += hexTable[0xF0 | (c >> 18)]
             + hexTable[0x80 | ((c >> 12) & 0x3F)]
             + hexTable[0x80 | ((c >> 6) & 0x3F)]
@@ -3136,7 +3164,7 @@ __webpack_require__.r(__webpack_exports__);
 
 
 const calendarWeeksTemplate = (0,_lib_utils_js__WEBPACK_IMPORTED_MODULE_0__.optimizeTemplateHTML)(`<div class="calendar-weeks">
-  <div class="days-of-week flex"><span class="dow h-6 leading-6 text-sm font-medium text-gray-500"></span></div>
+  <div class="days-of-week flex"><span class="dow h-6 leading-6 text-sm font-medium text-gray-500 dark:text-gray-400"></span></div>
   <div class="weeks">${(0,_lib_utils_js__WEBPACK_IMPORTED_MODULE_0__.createTagRepeat)('span', 6, {class: 'week block flex-1 leading-9 border-0 rounded-lg cursor-default text-center text-gray-900 font-semibold text-sm'})}</div>
 </div>`);
 
@@ -3161,7 +3189,7 @@ __webpack_require__.r(__webpack_exports__);
 
 const daysTemplate = (0,_lib_utils_js__WEBPACK_IMPORTED_MODULE_0__.optimizeTemplateHTML)(`<div class="days">
   <div class="days-of-week grid grid-cols-7 mb-1">${(0,_lib_utils_js__WEBPACK_IMPORTED_MODULE_0__.createTagRepeat)('span', 7, {class: 'dow block flex-1 leading-9 border-0 rounded-lg cursor-default text-center text-gray-900 font-semibold text-sm'})}</div>
-  <div class="datepicker-grid w-64 grid grid-cols-7">${(0,_lib_utils_js__WEBPACK_IMPORTED_MODULE_0__.createTagRepeat)('span', 42 , {class: 'block flex-1 leading-9 border-0 rounded-lg cursor-default text-center text-gray-900 font-semibold text-sm h-6 leading-6 text-sm font-medium text-gray-500'})}</div>
+  <div class="datepicker-grid w-64 grid grid-cols-7">${(0,_lib_utils_js__WEBPACK_IMPORTED_MODULE_0__.createTagRepeat)('span', 42 , {class: 'block flex-1 leading-9 border-0 rounded-lg cursor-default text-center text-gray-900 font-semibold text-sm h-6 leading-6 text-sm font-medium text-gray-500 dark:text-gray-400'})}</div>
 </div>`);
 
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (daysTemplate);
@@ -3184,20 +3212,20 @@ __webpack_require__.r(__webpack_exports__);
 
 
 const pickerTemplate = (0,_lib_utils_js__WEBPACK_IMPORTED_MODULE_0__.optimizeTemplateHTML)(`<div class="datepicker hidden">
-  <div class="datepicker-picker inline-block rounded-lg bg-white shadow-lg p-4">
+  <div class="datepicker-picker inline-block rounded-lg bg-white dark:bg-gray-700 shadow-lg p-4">
     <div class="datepicker-header">
-      <div class="datepicker-title bg-white px-2 py-3 text-center font-semibold"></div>
+      <div class="datepicker-title bg-white dark:bg-gray-700 dark:text-white px-2 py-3 text-center font-semibold"></div>
       <div class="datepicker-controls flex justify-between mb-2">
-        <button type="button" class="bg-white rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-900 text-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-gray-200 prev-btn"></button>
-        <button type="button" class="text-sm rounded-lg text-gray-900 bg-white font-semibold py-2.5 px-5 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200 view-switch"></button>
-        <button type="button" class="bg-white rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-900 text-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-gray-200 next-btn"></button>
+        <button type="button" class="bg-white dark:bg-gray-700 rounded-lg text-gray-500 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600 hover:text-gray-900 dark:hover:text-white text-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-gray-200 prev-btn"></button>
+        <button type="button" class="text-sm rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 font-semibold py-2.5 px-5 hover:bg-gray-100 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-200 view-switch"></button>
+        <button type="button" class="bg-white dark:bg-gray-700 rounded-lg text-gray-500 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600 hover:text-gray-900 dark:hover:text-white text-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-gray-200 next-btn"></button>
       </div>
     </div>
     <div class="datepicker-main p-1"></div>
     <div class="datepicker-footer">
       <div class="datepicker-controls flex space-x-2 mt-2">
-        <button type="button" class="%buttonClass% today-btn text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2 text-center w-1/2"></button>
-        <button type="button" class="%buttonClass% clear-btn text-gray-900 bg-white border border-gray-300 hover:bg-gray-100 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2 text-center w-1/2"></button>
+        <button type="button" class="%buttonClass% today-btn text-white bg-blue-700 dark:bg-blue-600 hover:bg-blue-800 dark:hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2 text-center w-1/2"></button>
+        <button type="button" class="%buttonClass% clear-btn text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2 text-center w-1/2"></button>
       </div>
     </div>
   </div>
@@ -3325,7 +3353,7 @@ class DaysView extends _View_js__WEBPACK_IMPORTED_MODULE_6__["default"] {
       Array.from(this.dow.children).forEach((el, index) => {
         const dow = (this.weekStart + index) % 7;
         el.textContent = this.dayNames[dow];
-        el.className = this.daysOfWeekDisabled.includes(dow) ? 'dow disabled text-center h-6 leading-6 text-sm font-medium text-gray-500 cursor-not-allowed' : 'dow text-center h-6 leading-6 text-sm font-medium text-gray-500';
+        el.className = this.daysOfWeekDisabled.includes(dow) ? 'dow disabled text-center h-6 leading-6 text-sm font-medium text-gray-500 dark:text-gray-400 cursor-not-allowed' : 'dow text-center h-6 leading-6 text-sm font-medium text-gray-500 dark:text-gray-400';
       });
     }
   }
@@ -3379,17 +3407,17 @@ class DaysView extends _View_js__WEBPACK_IMPORTED_MODULE_6__["default"] {
       const date = new Date(current);
       const day = date.getDay();
 
-      el.className = `datepicker-cell hover:bg-gray-100 block flex-1 leading-9 border-0 rounded-lg cursor-pointer text-center text-gray-900 font-semibold text-sm ${this.cellClass}`;
+      el.className = `datepicker-cell hover:bg-gray-100 dark:hover:bg-gray-600 block flex-1 leading-9 border-0 rounded-lg cursor-pointer text-center text-gray-900 dark:text-white font-semibold text-sm ${this.cellClass}`;
       el.dataset.date = current;
       el.textContent = date.getDate();
 
       if (current < this.first) {
-        classList.add('prev', 'text-gray-500');
+        classList.add('prev', 'text-gray-500', 'dark:text-white');
       } else if (current > this.last) {
-        classList.add('next', 'text-gray-500');
+        classList.add('next', 'text-gray-500', 'dark:text-white');
       }
       if (this.today === current) {
-        classList.add('today', 'bg-gray-100');
+        classList.add('today', 'bg-gray-100', 'dark:bg-gray-600', 'dark:bg-gray-600');
       }
       if (current < this.minDate || current > this.maxDate || this.disabled.includes(current)) {
         classList.add('disabled', 'cursor-not-allowed');
@@ -3404,21 +3432,21 @@ class DaysView extends _View_js__WEBPACK_IMPORTED_MODULE_6__["default"] {
       if (this.range) {
         const [rangeStart, rangeEnd] = this.range;
         if (current > rangeStart && current < rangeEnd) {
-          classList.add('range', 'bg-gray-200');
+          classList.add('range', 'bg-gray-200', 'dark:bg-gray-600');
           classList.remove('rounded-lg', 'rounded-l-lg', 'rounded-r-lg')
         }
         if (current === rangeStart) {
-          classList.add('range-start', 'bg-gray-100', 'rounded-l-lg');
+          classList.add('range-start', 'bg-gray-100', 'dark:bg-gray-600', 'rounded-l-lg');
           classList.remove('rounded-lg', 'rounded-r-lg');
         }
         if (current === rangeEnd) {
-          classList.add('range-end', 'bg-gray-100', 'rounded-r-lg');
+          classList.add('range-end', 'bg-gray-100', 'dark:bg-gray-600', 'rounded-r-lg');
           classList.remove('rounded-lg', 'rounded-l-lg');
         }
       }
       if (this.selected.includes(current)) {
-        classList.add('selected', 'bg-blue-700', 'text-white');
-        classList.remove('text-gray-900', 'text-gray-500', 'hover:bg-gray-100');
+        classList.add('selected', 'bg-blue-700', 'text-white', 'dark:bg-blue-600', 'dark:text-white');
+        classList.remove('text-gray-900', 'text-gray-500', 'hover:bg-gray-100', 'dark:text-white', 'dark:hover:bg-gray-600');
       }
       if (current === this.focused) {
         classList.add('focused');
@@ -3436,30 +3464,30 @@ class DaysView extends _View_js__WEBPACK_IMPORTED_MODULE_6__["default"] {
     this.grid
       .querySelectorAll('.range, .range-start, .range-end, .selected, .focused')
       .forEach((el) => {
-        el.classList.remove('range', 'range-start', 'range-end', 'selected', 'bg-blue-700', 'text-white', 'focused', 'bg-gray-100');
-        el.classList.add('text-gray-900', 'rounded-lg');
+        el.classList.remove('range', 'range-start', 'range-end', 'selected', 'bg-blue-700', 'text-white', 'dark:bg-blue-600', 'dark:text-white', 'focused', 'bg-gray-100', 'dark:bg-gray-600');
+        el.classList.add('text-gray-900', 'rounded-lg', 'dark:text-white');
       });
     Array.from(this.grid.children).forEach((el) => {
       const current = Number(el.dataset.date);
       const classList = el.classList;
       if (current > rangeStart && current < rangeEnd) {
-        classList.add('range', 'bg-gray-200');
+        classList.add('range', 'bg-gray-200', 'dark:bg-gray-600');
         classList.remove('rounded-lg');
       }
       if (current === rangeStart) {
-        classList.add('range-start', 'bg-gray-200', 'rounded-l-lg');
+        classList.add('range-start', 'bg-gray-200', 'dark:bg-gray-600', 'rounded-l-lg');
         classList.remove('rounded-lg', 'rounded-r-lg');
       }
       if (current === rangeEnd) {
-        classList.add('range-end', 'bg-gray-200', 'rounded-r-lg');
+        classList.add('range-end', 'bg-gray-200', 'dark:bg-gray-600', 'rounded-r-lg');
         classList.remove('rounded-lg', 'rounded-l-lg');
       }
       if (this.selected.includes(current)) {
-        classList.add('selected', 'bg-blue-700', 'text-white');
-        classList.remove('text-gray-900', 'hover:bg-gray-100');
+        classList.add('selected', 'bg-blue-700', 'text-white', 'dark:bg-blue-600', 'dark:text-white');
+        classList.remove('text-gray-900', 'hover:bg-gray-100', 'dark:text-white', 'dark:hover:bg-gray-600');
       }
       if (current === this.focused) {
-        classList.add('focused', 'bg-gray-100');
+        classList.add('focused', 'bg-gray-100', 'dark:bg-gray-600');
       }
     });
   }
@@ -3468,9 +3496,9 @@ class DaysView extends _View_js__WEBPACK_IMPORTED_MODULE_6__["default"] {
   refreshFocus() {
     const index = Math.round((this.focused - this.start) / 86400000);
     this.grid.querySelectorAll('.focused').forEach((el) => {
-      el.classList.remove('focused', 'bg-gray-100');
+      el.classList.remove('focused', 'bg-gray-100', 'dark:bg-gray-600');
     });
-    this.grid.children[index].classList.add('focused', 'bg-gray-100');
+    this.grid.children[index].classList.add('focused', 'bg-gray-100', 'dark:bg-gray-600');
   }
 }
 
@@ -3610,7 +3638,7 @@ class MonthsView extends _View_js__WEBPACK_IMPORTED_MODULE_3__["default"] {
       const classList = el.classList;
       const date = (0,_lib_date_js__WEBPACK_IMPORTED_MODULE_1__.dateValue)(this.year, index, 1);
 
-      el.className = `datepicker-cell hover:bg-gray-100 block flex-1 leading-9 border-0 rounded-lg cursor-pointer text-center text-gray-900 font-semibold text-sm ${this.cellClass}`;
+      el.className = `datepicker-cell hover:bg-gray-100 dark:hover:bg-gray-600 block flex-1 leading-9 border-0 rounded-lg cursor-pointer text-center text-gray-900 dark:text-white font-semibold text-sm ${this.cellClass}`;
       if (this.isMinView) {
         el.dataset.date = date;
       }
@@ -3638,11 +3666,11 @@ class MonthsView extends _View_js__WEBPACK_IMPORTED_MODULE_3__["default"] {
         }
       }
       if (selected.includes(index)) {
-        classList.add('selected', 'bg-blue-700', 'text-white');
-        classList.remove('text-gray-900', 'hover:bg-gray-100');
+        classList.add('selected', 'bg-blue-700', 'text-white', 'dark:bg-blue-600', 'dark:text-white');
+        classList.remove('text-gray-900', 'hover:bg-gray-100', 'dark:text-white', 'dark:hover:bg-gray-600');
       }
       if (index === this.focused) {
-        classList.add('focused', 'bg-gray-100');
+        classList.add('focused', 'bg-gray-100', 'dark:bg-gray-600');
       }
 
       if (this.beforeShow) {
@@ -3658,8 +3686,8 @@ class MonthsView extends _View_js__WEBPACK_IMPORTED_MODULE_3__["default"] {
     this.grid
       .querySelectorAll('.range, .range-start, .range-end, .selected, .focused')
       .forEach((el) => {
-        el.classList.remove('range', 'range-start', 'range-end', 'selected', 'bg-blue-700', 'text-white', 'focused', 'bg-gray-100');
-        el.classList.add('text-gray-900', 'hover:bg-gray-100');
+        el.classList.remove('range', 'range-start', 'range-end', 'selected', 'bg-blue-700', 'dark:bg-blue-600', 'dark:text-white', 'text-white', 'focused', 'bg-gray-100', 'dark:bg-gray-600');
+        el.classList.add('text-gray-900', 'hover:bg-gray-100', 'dark:text-white', 'dark:hover:bg-gray-600');
       });
     Array.from(this.grid.children).forEach((el, index) => {
       const classList = el.classList;
@@ -3673,11 +3701,11 @@ class MonthsView extends _View_js__WEBPACK_IMPORTED_MODULE_3__["default"] {
         classList.add('range-end');
       }
       if (selected.includes(index)) {
-        classList.add('selected', 'bg-blue-700', 'text-white');
-        classList.remove('text-gray-900', 'hover:bg-gray-100');
+        classList.add('selected', 'bg-blue-700', 'text-white', 'dark:bg-blue-600', 'dark:text-white');
+        classList.remove('text-gray-900', 'hover:bg-gray-100', 'dark:text-white', 'dark:hover:bg-gray-600');
       }
       if (index === this.focused) {
-        classList.add('focused', 'bg-gray-100');
+        classList.add('focused', 'bg-gray-100', 'dark:bg-gray-600');
       }
     });
   }
@@ -3685,9 +3713,9 @@ class MonthsView extends _View_js__WEBPACK_IMPORTED_MODULE_3__["default"] {
   // Update the view UI by applying the change of focused item
   refreshFocus() {
     this.grid.querySelectorAll('.focused').forEach((el) => {
-      el.classList.remove('focused', 'bg-gray-100');
+      el.classList.remove('focused', 'bg-gray-100'), 'dark:bg-gray-600';
     });
-    this.grid.children[this.focused].classList.add('focused', 'bg-gray-100');
+    this.grid.children[this.focused].classList.add('focused', 'bg-gray-100', 'dark:bg-gray-600');
   }
 }
 
@@ -3871,7 +3899,7 @@ class YearsView extends _View_js__WEBPACK_IMPORTED_MODULE_3__["default"] {
       const current = this.start + (index * this.step);
       const date = (0,_lib_date_js__WEBPACK_IMPORTED_MODULE_1__.dateValue)(current, 0, 1);
 
-      el.className = `datepicker-cell hover:bg-gray-100 block flex-1 leading-9 border-0 rounded-lg cursor-pointer text-center text-gray-900 font-semibold text-sm ${this.cellClass}`;
+      el.className = `datepicker-cell hover:bg-gray-100 dark:hover:bg-gray-600 block flex-1 leading-9 border-0 rounded-lg cursor-pointer text-center text-gray-900 dark:text-white font-semibold text-sm ${this.cellClass}`;
       if (this.isMinView) {
         el.dataset.date = date;
       }
@@ -3898,11 +3926,11 @@ class YearsView extends _View_js__WEBPACK_IMPORTED_MODULE_3__["default"] {
         }
       }
       if (this.selected.includes(current)) {
-        classList.add('selected', 'bg-blue-700', 'text-white');
-        classList.remove('text-gray-900', 'hover:bg-gray-100');
+        classList.add('selected', 'bg-blue-700', 'text-white', 'dark:bg-blue-600', 'dark:text-white');
+        classList.remove('text-gray-900', 'hover:bg-gray-100', 'dark:text-white', 'dark:hover:bg-gray-600');
       }
       if (current === this.focused) {
-        classList.add('focused', 'bg-gray-100');
+        classList.add('focused', 'bg-gray-100', 'dark:bg-gray-600');
       }
 
       if (this.beforeShow) {
@@ -3917,7 +3945,7 @@ class YearsView extends _View_js__WEBPACK_IMPORTED_MODULE_3__["default"] {
     this.grid
       .querySelectorAll('.range, .range-start, .range-end, .selected, .focused')
       .forEach((el) => {
-        el.classList.remove('range', 'range-start', 'range-end', 'selected', 'bg-blue-700', 'text-white', 'focused', 'bg-gray-100');
+        el.classList.remove('range', 'range-start', 'range-end', 'selected', 'bg-blue-700', 'text-white', 'dark:bg-blue-600', 'dark:text-white', 'focused', 'bg-gray-100', 'dark:bg-gray-600');
       });
     Array.from(this.grid.children).forEach((el) => {
       const current = Number(el.textContent);
@@ -3932,11 +3960,11 @@ class YearsView extends _View_js__WEBPACK_IMPORTED_MODULE_3__["default"] {
         classList.add('range-end');
       }
       if (this.selected.includes(current)) {
-        classList.add('selected', 'bg-blue-700', 'text-white');
-        classList.remove('text-gray-900', 'hover:bg-gray-100');
+        classList.add('selected', 'bg-blue-700', 'text-white', 'dark:bg-blue-600', 'dark:text-white');
+        classList.remove('text-gray-900', 'hover:bg-gray-100', 'dark:text-white', 'dark:hover:bg-gray-600');
       }
       if (current === this.focused) {
-        classList.add('focused', 'bg-gray-100');
+        classList.add('focused', 'bg-gray-100', 'dark:bg-gray-600');
       }
     });
   }
@@ -3945,9 +3973,9 @@ class YearsView extends _View_js__WEBPACK_IMPORTED_MODULE_3__["default"] {
   refreshFocus() {
     const index = Math.round((this.focused - this.start) / this.step);
     this.grid.querySelectorAll('.focused').forEach((el) => {
-      el.classList.remove('focused', 'bg-gray-100');
+      el.classList.remove('focused', 'bg-gray-100', 'dark:bg-gray-600');
     });
-    this.grid.children[index].classList.add('focused', 'bg-gray-100');
+    this.grid.children[index].classList.add('focused', 'bg-gray-100', 'dark:bg-gray-600');
   }
 }
 
@@ -6022,10 +6050,50 @@ __webpack_require__.r(__webpack_exports__);
 //
 //
 //
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = ({
   name: 'Chat',
   props: {
-    selected: Object
+    selected: Object,
+    user: Object
+  },
+  data: function data() {
+    return {
+      message: null
+    };
+  },
+  methods: {
+    sendMessage: function sendMessage() {
+      this.selected.chat.messages.push({
+        body: this.message,
+        sender_id: this.user.id
+      });
+      this.message = null;
+      this.updateMessages();
+    },
+    updateMessages: function updateMessages() {
+      var _this = this;
+
+      axios.patch(route('chat.update', this.selected.chat.id), this.selected).then(function () {
+        _this.selected.chat.messages.forEach(function (message) {
+          message.saved = true;
+        });
+      })["catch"](function (error) {
+        console.error(error);
+        console.log('Failed to update chat messages in database!');
+      });
+    }
   }
 });
 
@@ -6163,9 +6231,7 @@ __webpack_require__.r(__webpack_exports__);
   methods: {
     createAppointment: function createAppointment() {
       this.form.datetime = this.$refs.datepicker.value;
-      this.form.post(route('create.appointment'), {
-        preserveScroll: true
-      });
+      this.$emit('createAppointment', this.form);
     }
   }
 });
@@ -6183,6 +6249,10 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
+//
+//
+//
+//
 //
 //
 //
@@ -8154,6 +8224,15 @@ __webpack_require__.r(__webpack_exports__);
 //
 //
 //
+//
+//
+//
+//
+//
+//
+//
+//
+//
 
 
 
@@ -8165,24 +8244,29 @@ __webpack_require__.r(__webpack_exports__);
     AppointmentsForm: _Components_Appointments_Form__WEBPACK_IMPORTED_MODULE_2__["default"],
     AppointmentsChat: _Components_Appointments_Chat__WEBPACK_IMPORTED_MODULE_3__["default"]
   },
-  props: {
-    newAppointment: Boolean,
-    userAppointments: Array,
-    newAppointmentShop: Object
-  },
   data: function data() {
     return {
       selected: null
     };
   },
   mounted: function mounted() {
-    if (!this.selected) {
-      this.selected = this.userAppointments[0];
+    if (!this.selected && !this.$page.props.newAppointment) {
+      this.selected = this.$page.props.userAppointments[0];
     }
   },
   methods: {
+    createAppointment: function createAppointment(form) {
+      var _this = this;
+
+      form.post(route('create.appointment'), {
+        onSuccess: function onSuccess() {
+          _this.selected = _this.$page.props.userAppointments[0];
+        }
+      });
+    },
     updateSelectedAppointment: function updateSelectedAppointment(appointment) {
       this.selected = appointment;
+      this.$page.props.newAppointment = false;
     }
   }
 });
@@ -8370,9 +8454,9 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _Jetstream_Checkbox__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! @/Jetstream/Checkbox */ "./resources/js/Jetstream/Checkbox.vue");
 /* harmony import */ var _Jetstream_Label__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! @/Jetstream/Label */ "./resources/js/Jetstream/Label.vue");
 /* harmony import */ var _Jetstream_ValidationErrors__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! @/Jetstream/ValidationErrors */ "./resources/js/Jetstream/ValidationErrors.vue");
-function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) { symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); } keys.push.apply(keys, symbols); } return keys; }
+function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); enumerableOnly && (symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; })), keys.push.apply(keys, symbols); } return keys; }
 
-function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys(Object(source), true).forEach(function (key) { _defineProperty(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys(Object(source)).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
+function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = null != arguments[i] ? arguments[i] : {}; i % 2 ? ownKeys(Object(source), !0).forEach(function (key) { _defineProperty(target, key, source[key]); }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)) : ownKeys(Object(source)).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } return target; }
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
@@ -29866,11 +29950,24 @@ var weakRefDeref = hasWeakRef ? WeakRef.prototype.deref : null;
 var booleanValueOf = Boolean.prototype.valueOf;
 var objectToString = Object.prototype.toString;
 var functionToString = Function.prototype.toString;
-var match = String.prototype.match;
+var $match = String.prototype.match;
+var $slice = String.prototype.slice;
+var $replace = String.prototype.replace;
+var $toUpperCase = String.prototype.toUpperCase;
+var $toLowerCase = String.prototype.toLowerCase;
+var $test = RegExp.prototype.test;
+var $concat = Array.prototype.concat;
+var $join = Array.prototype.join;
+var $arrSlice = Array.prototype.slice;
+var $floor = Math.floor;
 var bigIntValueOf = typeof BigInt === 'function' ? BigInt.prototype.valueOf : null;
 var gOPS = Object.getOwnPropertySymbols;
 var symToString = typeof Symbol === 'function' && typeof Symbol.iterator === 'symbol' ? Symbol.prototype.toString : null;
 var hasShammedSymbols = typeof Symbol === 'function' && typeof Symbol.iterator === 'object';
+// ie, `has-tostringtag/shams
+var toStringTag = typeof Symbol === 'function' && Symbol.toStringTag && (typeof Symbol.toStringTag === hasShammedSymbols ? 'object' : 'symbol')
+    ? Symbol.toStringTag
+    : null;
 var isEnumerable = Object.prototype.propertyIsEnumerable;
 
 var gPO = (typeof Reflect === 'function' ? Reflect.getPrototypeOf : Object.getPrototypeOf) || (
@@ -29881,9 +29978,30 @@ var gPO = (typeof Reflect === 'function' ? Reflect.getPrototypeOf : Object.getPr
         : null
 );
 
+function addNumericSeparator(num, str) {
+    if (
+        num === Infinity
+        || num === -Infinity
+        || num !== num
+        || (num && num > -1000 && num < 1000)
+        || $test.call(/e/, str)
+    ) {
+        return str;
+    }
+    var sepRegex = /[0-9](?=(?:[0-9]{3})+(?![0-9]))/g;
+    if (typeof num === 'number') {
+        var int = num < 0 ? -$floor(-num) : $floor(num); // trunc(num)
+        if (int !== num) {
+            var intStr = String(int);
+            var dec = $slice.call(str, intStr.length + 1);
+            return $replace.call(intStr, sepRegex, '$&_') + '.' + $replace.call($replace.call(dec, /([0-9]{3})/g, '$&_'), /_$/, '');
+        }
+    }
+    return $replace.call(str, sepRegex, '$&_');
+}
+
 var inspectCustom = (__webpack_require__(/*! ./util.inspect */ "?2128").custom);
 var inspectSymbol = inspectCustom && isSymbol(inspectCustom) ? inspectCustom : null;
-var toStringTag = typeof Symbol === 'function' && typeof Symbol.toStringTag !== 'undefined' ? Symbol.toStringTag : null;
 
 module.exports = function inspect_(obj, options, depth, seen) {
     var opts = options || {};
@@ -29910,8 +30028,12 @@ module.exports = function inspect_(obj, options, depth, seen) {
         && opts.indent !== '\t'
         && !(parseInt(opts.indent, 10) === opts.indent && opts.indent > 0)
     ) {
-        throw new TypeError('options "indent" must be "\\t", an integer > 0, or `null`');
+        throw new TypeError('option "indent" must be "\\t", an integer > 0, or `null`');
     }
+    if (has(opts, 'numericSeparator') && typeof opts.numericSeparator !== 'boolean') {
+        throw new TypeError('option "numericSeparator", if provided, must be `true` or `false`');
+    }
+    var numericSeparator = opts.numericSeparator;
 
     if (typeof obj === 'undefined') {
         return 'undefined';
@@ -29930,10 +30052,12 @@ module.exports = function inspect_(obj, options, depth, seen) {
         if (obj === 0) {
             return Infinity / obj > 0 ? '0' : '-0';
         }
-        return String(obj);
+        var str = String(obj);
+        return numericSeparator ? addNumericSeparator(obj, str) : str;
     }
     if (typeof obj === 'bigint') {
-        return String(obj) + 'n';
+        var bigIntStr = String(obj) + 'n';
+        return numericSeparator ? addNumericSeparator(obj, bigIntStr) : bigIntStr;
     }
 
     var maxDepth = typeof opts.depth === 'undefined' ? 5 : opts.depth;
@@ -29952,7 +30076,7 @@ module.exports = function inspect_(obj, options, depth, seen) {
 
     function inspect(value, from, noIndent) {
         if (from) {
-            seen = seen.slice();
+            seen = $arrSlice.call(seen);
             seen.push(from);
         }
         if (noIndent) {
@@ -29970,21 +30094,21 @@ module.exports = function inspect_(obj, options, depth, seen) {
     if (typeof obj === 'function') {
         var name = nameOf(obj);
         var keys = arrObjKeys(obj, inspect);
-        return '[Function' + (name ? ': ' + name : ' (anonymous)') + ']' + (keys.length > 0 ? ' { ' + keys.join(', ') + ' }' : '');
+        return '[Function' + (name ? ': ' + name : ' (anonymous)') + ']' + (keys.length > 0 ? ' { ' + $join.call(keys, ', ') + ' }' : '');
     }
     if (isSymbol(obj)) {
-        var symString = hasShammedSymbols ? String(obj).replace(/^(Symbol\(.*\))_[^)]*$/, '$1') : symToString.call(obj);
+        var symString = hasShammedSymbols ? $replace.call(String(obj), /^(Symbol\(.*\))_[^)]*$/, '$1') : symToString.call(obj);
         return typeof obj === 'object' && !hasShammedSymbols ? markBoxed(symString) : symString;
     }
     if (isElement(obj)) {
-        var s = '<' + String(obj.nodeName).toLowerCase();
+        var s = '<' + $toLowerCase.call(String(obj.nodeName));
         var attrs = obj.attributes || [];
         for (var i = 0; i < attrs.length; i++) {
             s += ' ' + attrs[i].name + '=' + wrapQuotes(quote(attrs[i].value), 'double', opts);
         }
         s += '>';
         if (obj.childNodes && obj.childNodes.length) { s += '...'; }
-        s += '</' + String(obj.nodeName).toLowerCase() + '>';
+        s += '</' + $toLowerCase.call(String(obj.nodeName)) + '>';
         return s;
     }
     if (isArray(obj)) {
@@ -29993,12 +30117,15 @@ module.exports = function inspect_(obj, options, depth, seen) {
         if (indent && !singleLineValues(xs)) {
             return '[' + indentedJoin(xs, indent) + ']';
         }
-        return '[ ' + xs.join(', ') + ' ]';
+        return '[ ' + $join.call(xs, ', ') + ' ]';
     }
     if (isError(obj)) {
         var parts = arrObjKeys(obj, inspect);
+        if ('cause' in obj && !isEnumerable.call(obj, 'cause')) {
+            return '{ [' + String(obj) + '] ' + $join.call($concat.call('[cause]: ' + inspect(obj.cause), parts), ', ') + ' }';
+        }
         if (parts.length === 0) { return '[' + String(obj) + ']'; }
-        return '{ [' + String(obj) + '] ' + parts.join(', ') + ' }';
+        return '{ [' + String(obj) + '] ' + $join.call(parts, ', ') + ' }';
     }
     if (typeof obj === 'object' && customInspect) {
         if (inspectSymbol && typeof obj[inspectSymbol] === 'function') {
@@ -30046,14 +30173,14 @@ module.exports = function inspect_(obj, options, depth, seen) {
         var ys = arrObjKeys(obj, inspect);
         var isPlainObject = gPO ? gPO(obj) === Object.prototype : obj instanceof Object || obj.constructor === Object;
         var protoTag = obj instanceof Object ? '' : 'null prototype';
-        var stringTag = !isPlainObject && toStringTag && Object(obj) === obj && toStringTag in obj ? toStr(obj).slice(8, -1) : protoTag ? 'Object' : '';
+        var stringTag = !isPlainObject && toStringTag && Object(obj) === obj && toStringTag in obj ? $slice.call(toStr(obj), 8, -1) : protoTag ? 'Object' : '';
         var constructorTag = isPlainObject || typeof obj.constructor !== 'function' ? '' : obj.constructor.name ? obj.constructor.name + ' ' : '';
-        var tag = constructorTag + (stringTag || protoTag ? '[' + [].concat(stringTag || [], protoTag || []).join(': ') + '] ' : '');
+        var tag = constructorTag + (stringTag || protoTag ? '[' + $join.call($concat.call([], stringTag || [], protoTag || []), ': ') + '] ' : '');
         if (ys.length === 0) { return tag + '{}'; }
         if (indent) {
             return tag + '{' + indentedJoin(ys, indent) + '}';
         }
-        return tag + '{ ' + ys.join(', ') + ' }';
+        return tag + '{ ' + $join.call(ys, ', ') + ' }';
     }
     return String(obj);
 };
@@ -30064,7 +30191,7 @@ function wrapQuotes(s, defaultStyle, opts) {
 }
 
 function quote(s) {
-    return String(s).replace(/"/g, '&quot;');
+    return $replace.call(String(s), /"/g, '&quot;');
 }
 
 function isArray(obj) { return toStr(obj) === '[object Array]' && (!toStringTag || !(typeof obj === 'object' && toStringTag in obj)); }
@@ -30115,7 +30242,7 @@ function toStr(obj) {
 
 function nameOf(f) {
     if (f.name) { return f.name; }
-    var m = match.call(functionToString.call(f), /^function\s*([\w$]+)/);
+    var m = $match.call(functionToString.call(f), /^function\s*([\w$]+)/);
     if (m) { return m[1]; }
     return null;
 }
@@ -30215,10 +30342,10 @@ function inspectString(str, opts) {
     if (str.length > opts.maxStringLength) {
         var remaining = str.length - opts.maxStringLength;
         var trailer = '... ' + remaining + ' more character' + (remaining > 1 ? 's' : '');
-        return inspectString(str.slice(0, opts.maxStringLength), opts) + trailer;
+        return inspectString($slice.call(str, 0, opts.maxStringLength), opts) + trailer;
     }
     // eslint-disable-next-line no-control-regex
-    var s = str.replace(/(['\\])/g, '\\$1').replace(/[\x00-\x1f]/g, lowbyte);
+    var s = $replace.call($replace.call(str, /(['\\])/g, '\\$1'), /[\x00-\x1f]/g, lowbyte);
     return wrapQuotes(s, 'single', opts);
 }
 
@@ -30232,7 +30359,7 @@ function lowbyte(c) {
         13: 'r'
     }[n];
     if (x) { return '\\' + x; }
-    return '\\x' + (n < 0x10 ? '0' : '') + n.toString(16).toUpperCase();
+    return '\\x' + (n < 0x10 ? '0' : '') + $toUpperCase.call(n.toString(16));
 }
 
 function markBoxed(str) {
@@ -30244,7 +30371,7 @@ function weakCollectionOf(type) {
 }
 
 function collectionOf(type, size, entries, indent) {
-    var joinedEntries = indent ? indentedJoin(entries, indent) : entries.join(', ');
+    var joinedEntries = indent ? indentedJoin(entries, indent) : $join.call(entries, ', ');
     return type + ' (' + size + ') {' + joinedEntries + '}';
 }
 
@@ -30262,20 +30389,20 @@ function getIndent(opts, depth) {
     if (opts.indent === '\t') {
         baseIndent = '\t';
     } else if (typeof opts.indent === 'number' && opts.indent > 0) {
-        baseIndent = Array(opts.indent + 1).join(' ');
+        baseIndent = $join.call(Array(opts.indent + 1), ' ');
     } else {
         return null;
     }
     return {
         base: baseIndent,
-        prev: Array(depth + 1).join(baseIndent)
+        prev: $join.call(Array(depth + 1), baseIndent)
     };
 }
 
 function indentedJoin(xs, indent) {
     if (xs.length === 0) { return ''; }
     var lineJoiner = '\n' + indent.prev + indent.base;
-    return lineJoiner + xs.join(',' + lineJoiner) + '\n' + indent.prev;
+    return lineJoiner + $join.call(xs, ',' + lineJoiner) + '\n' + indent.prev;
 }
 
 function arrObjKeys(obj, inspect) {
@@ -30302,7 +30429,7 @@ function arrObjKeys(obj, inspect) {
         if (hasShammedSymbols && symMap['$' + key] instanceof Symbol) {
             // this is to prevent shammed Symbols, which are stored as strings, from being included in the string key section
             continue; // eslint-disable-line no-restricted-syntax, no-continue
-        } else if ((/[^\w$]/).test(key)) {
+        } else if ($test.call(/[^\w$]/, key)) {
             xs.push(inspect(key, obj) + ': ' + inspect(obj[key], obj));
         } else {
             xs.push(key + ': ' + inspect(obj[key], obj));
@@ -36187,7 +36314,63 @@ var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
-  return _c("span", { staticClass: "text-right" }, [_vm._v("Chat")])
+  return _c("div", [
+    _c("div", { staticClass: "text-center border-b-2" }, [
+      _vm._v("Appointment Time And NAME HERE"),
+    ]),
+    _vm._v(" "),
+    _vm.selected.chat.messages.length > 0
+      ? _c(
+          "div",
+          _vm._l(_vm.selected.chat.messages, function (message, index) {
+            return _c(
+              "h1",
+              {
+                key: index,
+                class: { "text-right": _vm.user.id != message.sender_id },
+              },
+              [_vm._v(_vm._s(message.body))]
+            )
+          }),
+          0
+        )
+      : _vm._e(),
+    _vm._v(" "),
+    _c("div", [
+      _c("input", {
+        directives: [
+          {
+            name: "model",
+            rawName: "v-model",
+            value: _vm.message,
+            expression: "message",
+          },
+        ],
+        attrs: { type: "text" },
+        domProps: { value: _vm.message },
+        on: {
+          input: function ($event) {
+            if ($event.target.composing) {
+              return
+            }
+            _vm.message = $event.target.value
+          },
+        },
+      }),
+      _vm._v(" "),
+      _c(
+        "button",
+        {
+          on: {
+            click: function ($event) {
+              return _vm.sendMessage()
+            },
+          },
+        },
+        [_vm._v("Send!")]
+      ),
+    ]),
+  ])
 }
 var staticRenderFns = []
 render._withStripped = true
@@ -36443,41 +36626,56 @@ var render = function () {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
-  return _vm.selected
-    ? _c(
-        "div",
-        _vm._l(_vm.userAppointments, function (appointment) {
-          return _c(
+  return _c(
+    "div",
+    [
+      _vm.newAppointment
+        ? _c(
             "div",
-            {
-              key: appointment.id,
-              staticClass: "p-4 border-b-2 border-indigo-400 cursor-pointer",
-              on: {
-                click: function ($event) {
-                  $event.preventDefault()
-                  return _vm.updateSelectedAppointment(appointment)
-                },
-              },
-            },
+            { staticClass: "p-4 border-b-2 border-indigo-400 cursor-pointer" },
             [
-              _c(
-                "h2",
-                {
-                  staticClass: "inline",
-                  class: { "font-bold": appointment.id == _vm.selected.id },
-                },
-                [_vm._v(_vm._s(appointment.shop.name))]
-              ),
-              _vm._v(" "),
-              _c("span", [
-                _vm._v("- " + _vm._s(_vm.filterDate(appointment.datetime))),
+              _c("h2", { staticClass: "inline font-bold" }, [
+                _vm._v(_vm._s(_vm.newAppointmentShop.name)),
               ]),
             ]
           )
-        }),
-        0
-      )
-    : _vm._e()
+        : _vm._e(),
+      _vm._v(" "),
+      _vm._l(_vm.userAppointments, function (appointment) {
+        return _c(
+          "div",
+          {
+            key: appointment.id,
+            staticClass: "p-4 border-b-2 border-indigo-400 cursor-pointer",
+            on: {
+              click: function ($event) {
+                $event.preventDefault()
+                return _vm.updateSelectedAppointment(appointment)
+              },
+            },
+          },
+          [
+            _c(
+              "h2",
+              {
+                staticClass: "inline",
+                class: {
+                  "font-bold":
+                    _vm.selected && appointment.id == _vm.selected.id,
+                },
+              },
+              [_vm._v(_vm._s(appointment.shop.name))]
+            ),
+            _vm._v(" "),
+            _c("span", [
+              _vm._v("- " + _vm._s(_vm.filterDate(appointment.datetime))),
+            ]),
+          ]
+        )
+      }),
+    ],
+    2
+  )
 }
 var staticRenderFns = []
 render._withStripped = true
@@ -40079,13 +40277,21 @@ var render = function () {
               _vm.$page.props.newAppointment
                 ? _c("appointments-form", {
                     attrs: {
-                      newAppointmentShop: _vm.newAppointmentShop,
+                      newAppointmentShop: _vm.$page.props.newAppointmentShop,
                       selected: _vm.selected,
                     },
+                    on: { createAppointment: _vm.createAppointment },
                   })
-                : _c("appointments-chat", {
-                    attrs: { selected: _vm.selected },
-                  }),
+                : _vm._e(),
+              _vm._v(" "),
+              !_vm.$page.props.newAppointment && _vm.selected
+                ? _c("appointments-chat", {
+                    attrs: {
+                      selected: _vm.selected,
+                      user: _vm.$page.props.user,
+                    },
+                  })
+                : _vm._e(),
             ],
             1
           ),
