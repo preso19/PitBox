@@ -16,8 +16,10 @@ class ShopSeeder extends Seeder
      */
     public function run()
     {
-        Shop::factory()
-            ->count(20)
-            ->create();
+        Shop::factory([
+            'owner_id' => 1,
+        ])
+        ->count(20)
+        ->create();
     }
 }

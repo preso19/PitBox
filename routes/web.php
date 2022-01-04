@@ -45,13 +45,15 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
 
     Route::get('/my-shop', function () {
         return Inertia::render('MyShop', [
-            'userShop' => Auth::user()->shop
+            'userShop' => Auth::user()->shop,
+            'userRole' => Auth::user()->roles->pluck('name')->first(),
         ]);
     })->name('my-shop');
 
     Route::get('/edit-shop', function () {
         return Inertia::render('EditShop', [
-            'userShop' => Auth::user()->shop
+            'userShop' => Auth::user()->shop,
+            'userRole' => Auth::user()->roles->pluck('name')->first(),
         ]);
     })->name('edit-shop');
 
@@ -60,6 +62,7 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
             'userAppointments' => Auth::user()->appointments()->with(['shop', 'chat', 'chat.messages'])->get(),
             'newAppointment' => request('new') ? true : false,
             'newAppointmentShop' => Shop::find(request('shop')),
+            'userRole' => Auth::user()->roles->pluck('name')->first(),
         ]);
     })->name('appointments');
 });
