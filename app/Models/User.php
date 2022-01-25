@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Models\Chat;
 use Laravel\Sanctum\HasApiTokens;
 use Laravel\Jetstream\HasProfilePhoto;
 use Spatie\Permission\Traits\HasRoles;
@@ -29,6 +28,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'cars',
     ];
 
     /**

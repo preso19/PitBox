@@ -12,6 +12,7 @@
 					type="text"
 					placeholder="Brief explanation of your appointment"
                     v-model="form.subject"
+                    required
 				>
 			</div>
 
@@ -30,6 +31,7 @@
                         type="text"
                         class="border-gray-300 focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 rounded-md shadow-sm mt-1 block w-full pl-10"
                         placeholder="Select date"
+                        required
                     >
 				</div>
 			</div>
@@ -56,6 +58,7 @@
                     rows="4"
 					placeholder="More detailed explanation of your request"
                     v-model="form.details"
+                    required
                 >
 				</textarea>
 			</div>
