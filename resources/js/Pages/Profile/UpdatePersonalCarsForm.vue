@@ -9,71 +9,79 @@
         </template>
 
         <template #extra>
-            <div>
-                <div class="border-gray-300 focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 rounded-md shadow-sm" v-for="(car, index) in form.cars" :key="index">
-                    Make: {{car.make}}
+            <div class="grid grid-cols-3 -ml-2 -mr-2" v-if="user.cars">
+                <div class="bg-gray-50 p-4 ml-2 mr-2 mb-4 border-gray-300 rounded-md shadow-sm" v-for="(car, index) in user.cars" :key="index">
+                    <div><span class="font-bold">Make:</span> {{car.make}}</div>
 
-                    {{car.year}}
+                    <div><span class="font-bold">Model:</span> {{car.model}}</div>
 
-                    <br>
-
-                    Model: {{car.model}}
+                    <div><span class="font-bold">Year:</span> {{car.year}}</div>
                 </div>
             </div>
 
-            <button type="button" @click="formState = 'stepOne'" class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 active:bg-gray-900 focus:outline-none focus:border-gray-900 focus:shadow-outline-gray transition ease-in-out duration-150">
+            <button type="button" @click="addNewVehicle()" class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 active:bg-gray-900 focus:outline-none focus:border-gray-900 focus:shadow-outline-gray transition ease-in-out duration-150">
                 Add New Vehicle
             </button>
 
-            <div class="grid grid-cols-6 gap-6">
+            <div class="grid grid-cols-6 gap-6 mt-8" v-if="formState === 'stepOne' || formState === 'stepTwo' || formState === 'stepThree'">
                 <!-- Make -->
-                <div class="col-span-6 sm:col-span-4" v-if="formState === 'stepOne'">
+                <div class="col-span-6 sm:col-span-4" v-if="formState === 'stepOne' && carMakes">
                     <jet-label for="make" value="Search Vehicle Make" />
-                    <jet-input id="make" type="text" class="mt-1 block w-full" v-model="form.make" autocomplete="make" />
-                    <jet-input-error :message="form.errors.make" class="mt-2" />
 
-                    <jet-label value="Select" />
-                    <ul>
-                        <li>Audi</li>
-                        <li>Audi</li>
-                        <li>Audi</li>
-                        <li>Audi</li>
-                        <li>Audi</li>
-                        <li>Audi</li>
-                        <li>Audi</li>
-                        <li>Audi</li>
-                        <li>Audi</li>
-                        <li>Audi</li>
-                        <li>Audi</li>
+                    <ul class="border mt-2 block max-h-32 overflow-x-auto border-gray-300 focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 rounded-md shadow-sm">
+                        <li v-for="(carMake, index) in carMakes"
+                            :key="index"
+                            class="pl-2 pt-1 pb-1 cursor-pointer hover:bg-indigo-300"
+                            :class="{'bg-gray-50': index % 2 === 0}"
+                            @click="selectMake(carMake)"
+                        >
+                            {{carMake}}
+                        </li>
                     </ul>
                 </div>
 
                 <!-- Model -->
-                <div class="col-span-6 sm:col-span-4" v-if="formState === 'stepTwo'">
+                <div class="col-span-6 sm:col-span-4" v-if="formState === 'stepTwo' && carModels">
                     <jet-label for="model" value="Search Vehicle Model" />
-                    <jet-input id="model" type="text" class="mt-1 block w-full" v-model="form.model" autocomplete="model" />
-                    <jet-input-error :message="form.errors.model" class="mt-2" />
 
-                    <jet-label value="Select" />
-                    <ul>
-                        <li>S3</li>
-                        <li>S3</li>
+                    <ul class="border mt-2 block max-h-32 overflow-x-auto border-gray-300 focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 rounded-md shadow-sm">
+                        <li v-for="(carModel, index) in carModels"
+                            :key="index"
+                            class="pl-2 pt-1 pb-1 cursor-pointer hover:bg-indigo-300"
+                            :class="{'bg-gray-50': index % 2 === 0}"
+                            @click="selectModel(carModel)"
+                        >
+                            {{carModel.model}}
+                        </li>
                     </ul>
                 </div>
 
                 <!-- Year -->
-                <div class="col-span-6 sm:col-span-4" v-if="formState === 'stepThree'">
+                <div class="col-span-6 sm:col-span-4" v-if="formState === 'stepThree' && carYears">
                     <jet-label for="year" value="Search Vehicle Year" />
-                    <jet-input id="year" type="text" class="mt-1 block w-full" v-model="form.year" autocomplete="year" />
-                    <jet-input-error :message="form.errors.year" class="mt-2" />
 
-                    <jet-label value="Select" />
-                    <ul>
-                        <li>2008</li>
-                        <li>2009</li>
+                    <ul class="border mt-2 block max-h-32 overflow-x-auto border-gray-300 focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 rounded-md shadow-sm">
+                        <li v-for="(carYear, index) in carYears"
+                            :key="index"
+                            class="pl-2 pt-1 pb-1 cursor-pointer hover:bg-indigo-300"
+                            :class="{'bg-gray-50': index % 2 === 0}"
+                            @click="selectYear(carYear)"
+                        >
+                            {{carYear}}
+                        </li>
                     </ul>
                 </div>
             </div>
+        </template>
+
+        <template #actions>
+            <jet-action-message :on="form.recentlySuccessful" class="mr-3">
+                Saved.
+            </jet-action-message>
+
+            <jet-button :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
+                Save
+            </jet-button>
         </template>
     </jet-form-section>
 </template>
@@ -108,14 +116,78 @@
                 }),
 
                 formState: 'none',
-                newCar: {},
+                carMakes: null,
+                carModels: null,
+                carYears: null,
             }
         },
 
         methods: {
+            addNewVehicle() {
+                this.fetchCarMakes().then(() => {
+                    this.formState = 'stepOne'
+                })
+            },
+
+            selectMake(make) {
+                this.fetchCarModelsByMake(make).then(() => {
+                    if (this.user.cars === null) {
+                        this.user.cars = []
+                    }
+
+                    this.user.cars.push({})
+
+                    let item = this.user.cars[this.user.cars.length - 1]
+                    item.make = make
+                    this.$set(this.user.cars, this.user.cars.length - 1, item)
+
+                    this.formState = 'stepTwo'
+                })
+            },
+
+            selectModel(modelData) {
+                let item = this.user.cars[this.user.cars.length - 1]
+                item.model = modelData.model
+                this.$set(this.user.cars, this.user.cars.length - 1, item)
+
+                this.carYears = JSON.parse(modelData.years, true).map(item => item.replace(' ', ''))
+
+                this.formState = 'stepThree'
+            },
+
+            selectYear(year) {
+                let item = this.user.cars[this.user.cars.length - 1]
+                item.year = year
+                this.$set(this.user.cars, this.user.cars.length - 1, item)
+
+                this.formState = 'none'
+            },
+
+            fetchCarMakes() {
+                return axios.get(route('car.makes'))
+                    .then(response => {
+                        this.carMakes = Object.values(response.data).sort((a, b) => a.localeCompare(b))
+                    })
+                    .catch((error) => {
+                        console.error(error)
+                        console.log('Failed to fetch car makes!')
+                    })
+            },
+
+            fetchCarModelsByMake(make) {
+                return axios.get(route('car.models', { _query: { make } }))
+                    .then(response => {
+                        this.carModels = response.data.sort((a, b) => a.model.localeCompare(b.model))
+                    })
+                    .catch((error) => {
+                        console.error(error)
+                        console.log('Failed to fetch car models!')
+                    })
+            },
+
             updateProfileCars() {
 
-            }
+            },
         },
     }
 </script>

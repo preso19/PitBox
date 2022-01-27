@@ -1,11 +1,6 @@
 <?php
 
-use App\Models\Shop;
-use Inertia\Inertia;
-use App\Models\Appointment;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Database\Eloquent\Builder;
 
 /*
 |--------------------------------------------------------------------------
@@ -32,50 +27,21 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     Route::post('/appointment', 'AppointmentController@create')->name('create.appointment');
 
     /**
+     * Profile routes
+     */
+    Route::get('/car/makes', 'CarController@carMakes')->name('car.makes');
+    Route::get('/car/models', 'CarController@carModels')->name('car.models');
+
+    /**
      * Chat routes
      */
     Route::patch('/chat/{chat}/', 'ChatController@update')->name('chat.update');
 
-    Route::get('/', function () {
-        return Inertia::render('Home', [
-            'canLogin' => Route::has('login'),
-            'canRegister' => Route::has('register'),
-            'userRole' => Auth::user()->roles->pluck('name')->first(),
-            'shops' => Shop::all(),
-        ]);
-    })->name('home');
-
-    Route::get('/my-shop', function () {
-        return Inertia::render('MyShop', [
-            'userShop' => Auth::user()->shop,
-            'userRole' => Auth::user()->roles->pluck('name')->first(),
-        ]);
-    })->name('my-shop');
-
-    Route::get('/edit-shop', function () {
-        return Inertia::render('EditShop', [
-            'userShop' => Auth::user()->shop,
-            'userRole' => Auth::user()->roles->pluck('name')->first(),
-        ]);
-    })->name('edit-shop');
-
-    Route::get('/appointments', function () {
-        $user = Auth::user();
-        $userRole = $user->roles->pluck('name')->first();
-
-        if ($userRole === 'client') {
-            $userAppointments = $user->appointments()->with(['shop', 'chat', 'chat.messages'])->get();
-        } else {
-            $userAppointments = Appointment::whereHas('shop', function(Builder $query) use ($user) {
-                $query->where('id', '=', $user->shop->id);
-            })->with(['shop', 'chat', 'chat.messages'])->get();
-        }
-
-        return Inertia::render('Appointments', [
-            'userAppointments' => $userAppointments,
-            'newAppointment' => request('new') ? true : false,
-            'newAppointmentShop' => Shop::find(request('shop')),
-            'userRole' => $userRole,
-        ]);
-    })->name('appointments');
+    /**
+     * Page Rendering
+     */
+    Route::get('/', 'PageRenderController@home')->name('home');
+    Route::get('/my-shop', 'PageRenderController@myShop')->name('my-shop');
+    Route::get('/edit-shop', 'PageRenderController@editShop')->name('edit-shop');
+    Route::get('/appointments', 'PageRenderController@appointments')->name('appointments');
 });

@@ -30,5 +30,4 @@ class Car extends Model
     protected $casts = [
         'years' => 'array',
     ];
-
 }
