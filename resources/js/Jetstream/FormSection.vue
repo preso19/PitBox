@@ -6,7 +6,17 @@
         </jet-section-title>
 
         <div class="mt-5 md:mt-0 md:col-span-2">
-            <form @submit.prevent="$emit('submitted')">
+            <div class="shadow overflow-hidden sm:rounded-md mb-5" v-if="hasExtra">
+                <div class="px-4 py-5 bg-white sm:p-6">
+                    <slot name="extra"></slot>
+                </div>
+
+                <div class="flex items-center justify-end px-4 py-3 bg-gray-50 text-right sm:px-6" v-if="needsExtraActions">
+                    <slot name="actions"></slot>
+                </div>
+            </div>
+
+            <form @submit.prevent="$emit('submitted')" v-if="hasForm">
                 <div class="shadow overflow-hidden sm:rounded-md">
                     <div class="px-4 py-5 bg-white sm:p-6">
                         <div class="grid grid-cols-6 gap-6">
@@ -34,6 +44,18 @@
         computed: {
             hasActions() {
                 return !! this.$slots.actions
+            },
+
+            hasExtra() {
+                return !! this.$slots.extra
+            },
+
+            hasForm() {
+                return !! this.$slots.form
+            },
+
+            needsExtraActions() {
+                return ! this.$slots.form
             }
         }
     }
