@@ -31,6 +31,7 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
      */
     Route::get('/car/makes', 'CarController@carMakes')->name('car.makes');
     Route::get('/car/models', 'CarController@carModels')->name('car.models');
+    Route::put('/user/cars', 'UserController@updateCars')->name('user.cars');
 
     /**
      * Chat routes

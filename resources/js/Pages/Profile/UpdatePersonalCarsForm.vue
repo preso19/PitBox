@@ -9,13 +9,17 @@
         </template>
 
         <template #extra>
-            <div class="grid grid-cols-3 -ml-2 -mr-2" v-if="user.cars">
-                <div class="bg-gray-50 p-4 ml-2 mr-2 mb-4 border-gray-300 rounded-md shadow-sm" v-for="(car, index) in user.cars" :key="index">
+            <div class="grid grid-cols-3 -ml-2 -mr-2" v-if="newCars">
+                <div class="bg-gray-50 p-4 ml-2 mr-2 mb-4 border-gray-300 rounded-md shadow-sm relative" v-for="(car, index) in newCars" :key="index">
                     <div><span class="font-bold">Make:</span> {{car.make}}</div>
 
                     <div><span class="font-bold">Model:</span> {{car.model}}</div>
 
                     <div><span class="font-bold">Year:</span> {{car.year}}</div>
+
+                    <a href="#" class="block absolute top-2 right-4" @click.prevent="removeCar(index)">
+                        <i class="fa fa-times" aria-hidden="true"></i>
+                    </a>
                 </div>
             </div>
 
@@ -75,13 +79,17 @@
         </template>
 
         <template #actions>
-            <jet-action-message :on="form.recentlySuccessful" class="mr-3">
+            <jet-action-message :on="recentlySuccessful" class="mr-3">
                 Saved.
             </jet-action-message>
 
-            <jet-button :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
+            <button @click.prevent="updateProfileCars()"
+                class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 active:bg-gray-900 focus:outline-none focus:border-gray-900 focus:shadow-outline-gray transition ease-in-out duration-150"
+                :class="{ 'opacity-25': processing }"
+                :disabled="processing"
+            >
                 Save
-            </jet-button>
+            </button>
         </template>
     </jet-form-section>
 </template>
@@ -110,16 +118,18 @@
 
         data() {
             return {
-                form: this.$inertia.form({
-                    _method: 'PUT',
-                    cars: this.user.cars,
-                }),
-
                 formState: 'none',
                 carMakes: null,
                 carModels: null,
                 carYears: null,
+                processing: false,
+                recentlySuccessful: false,
+                newCars: null,
             }
+        },
+
+        mounted() {
+            this.newCars = JSON.parse(this.user.cars)
         },
 
         methods: {
@@ -131,24 +141,24 @@
 
             selectMake(make) {
                 this.fetchCarModelsByMake(make).then(() => {
-                    if (this.user.cars === null) {
-                        this.user.cars = []
+                    if (this.newCars === null) {
+                        this.newCars = []
                     }
 
-                    this.user.cars.push({})
+                    this.newCars.push({})
 
-                    let item = this.user.cars[this.user.cars.length - 1]
+                    let item = this.newCars[this.newCars.length - 1]
                     item.make = make
-                    this.$set(this.user.cars, this.user.cars.length - 1, item)
+                    this.$set(this.newCars, this.newCars.length - 1, item)
 
                     this.formState = 'stepTwo'
                 })
             },
 
             selectModel(modelData) {
-                let item = this.user.cars[this.user.cars.length - 1]
+                let item = this.newCars[this.newCars.length - 1]
                 item.model = modelData.model
-                this.$set(this.user.cars, this.user.cars.length - 1, item)
+                this.$set(this.newCars, this.newCars.length - 1, item)
 
                 this.carYears = JSON.parse(modelData.years, true).map(item => item.replace(' ', ''))
 
@@ -156,11 +166,15 @@
             },
 
             selectYear(year) {
-                let item = this.user.cars[this.user.cars.length - 1]
+                let item = this.newCars[this.newCars.length - 1]
                 item.year = year
-                this.$set(this.user.cars, this.user.cars.length - 1, item)
+                this.$set(this.newCars, this.newCars.length - 1, item)
 
                 this.formState = 'none'
+            },
+
+            removeCar(index) {
+                this.newCars.splice(index, 1);
             },
 
             fetchCarMakes() {
@@ -186,7 +200,21 @@
             },
 
             updateProfileCars() {
+                this.processing = true
 
+                axios.put(route('user.cars'), this.newCars)
+                    .then(() => {
+                        this.processing = false
+
+                        this.recentlySuccessful = true
+                        setTimeout(() => {
+                            this.recentlySuccessful = false
+                        }, 3000);
+                    })
+                    .catch((error) => {
+                        console.error(error)
+                        console.log('Failed to update user cars!')
+                    })
             },
         },
     }
