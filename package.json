@@ -33,7 +33,6 @@
         "@themesberg/tailwind-datepicker": "^1.0.1",
         "laravel-echo": "^1.11.3",
         "pusher-js": "^7.0.3",
-        "vue-slick-carousel": "^1.0.6",
-        "vue2-google-maps": "^0.10.7"
+        "vue-slick-carousel": "^1.0.6"
     }
 }
