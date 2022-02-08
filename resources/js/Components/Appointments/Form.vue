@@ -27,6 +27,7 @@
 					</div>
 
 					<input
+						datepicker datepicker-autohide
                         ref="datepicker"
                         type="text"
                         class="border-gray-300 focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 rounded-md shadow-sm mt-1 block w-full pl-10"
@@ -77,15 +78,15 @@
 </template>
 
 <script>
-    import Datepicker from '@themesberg/tailwind-datepicker/Datepicker';
 	import Textarea from '../../Jetstream/Textarea.vue'
+	import Datepicker from '@themesberg/tailwind-datepicker/Datepicker';
 
 	export default {
         name: 'Form',
 
 		components: {
 			Textarea,
-            Datepicker
+			Datepicker
 		},
 
         props: {
@@ -103,10 +104,6 @@
                     shopId: this.newAppointmentShop.id
                 })
             }
-        },
-
-        mounted() {
-            new Datepicker(this.$refs.datepicker)
         },
 
         methods: {
