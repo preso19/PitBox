@@ -11,28 +11,11 @@
         <template #form>
             <!-- Map -->
             <div class="col-span-6 sm:col-span-4 relative">
-                <GmapMap
+                <div
                     class="rounded-md overflow-hidden"
                     style="width: 100%; height: 300px"
-                    :center="{lat: parseInt(form.lat), lng: parseInt(form.lng)}"
-                    :zoom="10"
-                    :options="{
-                        zoomControl: true,
-                        mapTypeControl: false,
-                        scaleControl: false,
-                        streetViewControl: false,
-                        rotateControl: false,
-                        fullscreenControl: false,
-                        disableDefaultUi: true
-                    }">
-                        <GmapMarker
-                            :key="form.lat"
-                            :clickable="true"
-                            :draggable="true"
-                            :position="google && new google.maps.LatLng(parseInt(form.lat), parseInt(form.lng))"
-                            @dragend="updateMarker"
-                        />
-                </GmapMap>
+                    ref="map"
+                ></div>
             </div>
         </template>
 
@@ -52,7 +35,6 @@
     import JetButton from '@/Jetstream/Button'
     import JetFormSection from '@/Jetstream/FormSection'
     import JetActionMessage from '@/Jetstream/ActionMessage'
-    import { gmapApi } from 'vue2-google-maps'
 
     export default {
         components: {
@@ -74,17 +56,30 @@
             }
         },
 
-        computed: {
-            google: gmapApi
+        mounted() {
+            let map = new google.maps.Map(this.$refs.map, {
+                center: { lat: parseFloat(this.shop.lat), lng: parseFloat(this.shop.lng) },
+                zoom: 8,
+            });
+
+            let marker = new google.maps.Marker({
+                position: { lat: parseFloat(this.shop.lat), lng: parseFloat(this.shop.lng) },
+                map: map,
+                draggable:true,
+            });
+
+            marker.addListener('dragend', event => {
+                this.form.lat = event.latLng.lat()
+                this.form.lng = event.latLng.lng()
+
+                this.updateMarker(event)
+            });
         },
 
         methods: {
             updateMarker(location) {
-                let lat = location.latLng.lat()
-                let lng = location.latLng.lng()
-
                 this.form.put(route('update.shop.location', this.shop.id), {
-                    preserveScroll: true
+                    preserveScroll: true,
                 });
             }
         },

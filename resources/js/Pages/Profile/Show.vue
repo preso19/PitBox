@@ -14,6 +14,12 @@
                     <jet-section-border />
                 </div>
 
+                <div v-if="$page.props.jetstream.canUpdateProfileInformation">
+                    <update-personal-cars-form :user="$page.props.user" />
+
+                    <jet-section-border />
+                </div>
+
                 <div v-if="$page.props.jetstream.canUpdatePassword">
                     <update-password-form class="mt-10 sm:mt-0" />
 
@@ -46,6 +52,7 @@
     import TwoFactorAuthenticationForm from './TwoFactorAuthenticationForm'
     import UpdatePasswordForm from './UpdatePasswordForm'
     import UpdateProfileInformationForm from './UpdateProfileInformationForm'
+    import UpdatePersonalCarsForm from './UpdatePersonalCarsForm';
 
     export default {
         props: ['sessions'],
@@ -58,6 +65,7 @@
             TwoFactorAuthenticationForm,
             UpdatePasswordForm,
             UpdateProfileInformationForm,
+            UpdatePersonalCarsForm,
         },
     }
 </script>

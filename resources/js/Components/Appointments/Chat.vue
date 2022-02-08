@@ -29,29 +29,37 @@
             }
         },
 
+        mounted() {
+            Echo.private('chat')
+                .listen('MessageSent', (e) => {
+                    this.selected.chat.messages.push({
+                        body: e.body,
+                        sender_id: e.sender.id,
+                    })
+                });
+        },
+
         methods: {
             sendMessage() {
-                this.selected.chat.messages.push({
+                let newMessage = {
                     body: this.message,
                     sender_id: this.user.id,
-                })
+                }
+
+                this.selected.chat.messages.push(newMessage)
 
                 this.message = null
 
-                this.updateMessages()
+                this.saveMessage(newMessage)
             },
 
-            updateMessages() {
-                axios.patch(route('chat.update', this.selected.chat.id), this.selected)
-                .then(() => {
-                    this.selected.chat.messages.forEach((message, index) => {
-                        message.id = index + 1
+            saveMessage(newMessage) {
+                console.log('test');
+                axios.patch(route('chat.update', this.selected.chat.id), newMessage)
+                    .catch((error) => {
+                        console.error(error)
+                        console.log('Failed to save chat message in database!')
                     })
-                })
-                .catch((error) => {
-                    console.error(error)
-                    console.log('Failed to update chat messages in database!')
-                })
             }
         }
     }

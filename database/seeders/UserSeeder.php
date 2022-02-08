@@ -15,28 +15,34 @@ class UserSeeder extends Seeder
      */
     public function run()
     {
-        $user = User::factory()->create([
+        User::factory()->create([
             'name' => 'Admin',
             'email' => 'admin@pitstop.com',
             'password' => Hash::make('demo'),
-        ]);
+        ])->assignRole('admin');
 
-        $user->assignRole('admin');
-
-        $user = User::factory()->create([
-            'name' => 'Mechanic',
-            'email' => 'mechanic@pitstop.com',
+        User::factory()->create([
+            'name' => 'Mechanic One',
+            'email' => 'mechanicOne@pitstop.com',
             'password' => Hash::make('demo'),
-        ]);
+        ])->assignRole('mechanic');
 
-        $user->assignRole('mechanic');
-
-        $user = User::factory()->create([
-            'name' => 'Client',
-            'email' => 'client@pitstop.com',
+        User::factory()->create([
+            'name' => 'Mechanic Two',
+            'email' => 'mechanicTwo@pitstop.com',
             'password' => Hash::make('demo'),
-        ]);
+        ])->assignRole('mechanic');
 
-        $user->assignRole('client');
+        User::factory()->create([
+            'name' => 'ClientOne',
+            'email' => 'clientOne@pitstop.com',
+            'password' => Hash::make('demo'),
+        ])->assignRole('client');
+
+        User::factory()->create([
+            'name' => 'ClientTwo',
+            'email' => 'clientTwo@pitstop.com',
+            'password' => Hash::make('demo'),
+        ])->assignRole('client');
     }
 }

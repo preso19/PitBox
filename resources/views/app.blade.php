@@ -18,6 +18,7 @@
 
         <!-- Scripts -->
         @routes
+        <script src="https://maps.googleapis.com/maps/api/js?key={{ config('services.google.maps') }}&v=weekly&channel=2" async></script>
         <script src="{{ mix('js/app.js') }}" defer></script>
     </head>
     <body class="font-sans antialiased">

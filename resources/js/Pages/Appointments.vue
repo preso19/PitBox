@@ -16,6 +16,7 @@
                     v-if="$page.props.newAppointment"
                     :newAppointmentShop="$page.props.newAppointmentShop"
                     :selected="selected"
+                    :user="$page.props.user"
                     @createAppointment="createAppointment"
                 ></appointments-form>
 

@@ -12,6 +12,7 @@
 					type="text"
 					placeholder="Brief explanation of your appointment"
                     v-model="form.subject"
+                    required
 				>
 			</div>
 
@@ -30,6 +31,7 @@
                         type="text"
                         class="border-gray-300 focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 rounded-md shadow-sm mt-1 block w-full pl-10"
                         placeholder="Select date"
+                        required
                     >
 				</div>
 			</div>
@@ -40,7 +42,7 @@
 				</label>
 
 				<select v-model="form.car" class="border-gray-300 focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 rounded-md shadow-sm mt-1 block w-full">
-					<option v-for="car in cars" :key="car.id" :value="car">{{car.name}}</option>
+					<option v-for="car in JSON.parse(user.cars)" :key="car.model" :value="car">{{car.make}} - {{car.model}} - {{car.year}}</option>
 				</select>
 			</div>
 
@@ -56,6 +58,7 @@
                     rows="4"
 					placeholder="More detailed explanation of your request"
                     v-model="form.details"
+                    required
                 >
 				</textarea>
 			</div>
@@ -74,19 +77,20 @@
 </template>
 
 <script>
-    import Datepicker from '@themesberg/tailwind-datepicker/Datepicker';
 	import Textarea from '../../Jetstream/Textarea.vue'
+	import Datepicker from '@themesberg/tailwind-datepicker/Datepicker';
 
 	export default {
         name: 'Form',
 
 		components: {
 			Textarea,
-            Datepicker
+			Datepicker
 		},
 
         props: {
-            newAppointmentShop: Object
+            newAppointmentShop: Object,
+            user: Object
         },
 
         data() {
@@ -97,16 +101,11 @@
                     car: null,
                     details: null,
                     shopId: this.newAppointmentShop.id
-                }),
-                cars: [
-                    {id: 1, name: 'Car 1', brand: 'bmw', year: '1999'},
-                    {id: 2, name: 'Car 2', brand: 'audi', year: '1997'},
-                    {id: 3, name: 'Car 3', brand: 'nissan', year: '1998'},
-                ]
+                })
             }
         },
 
-        mounted() {
+		mounted() {
             new Datepicker(this.$refs.datepicker)
         },
 
