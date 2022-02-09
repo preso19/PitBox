@@ -6,6 +6,10 @@
 
                 <jet-section-border />
 
+                <update-photos :shop="$page.props.userShop" />
+
+                <jet-section-border />
+
                 <update-location :shop="$page.props.userShop" />
 
                 <jet-section-border />
@@ -18,6 +22,7 @@
     import AppLayout from '@/Layouts/AppLayout'
     import JetSectionBorder from '@/Jetstream/SectionBorder'
     import UpdateInformation from '@/Components/EditShop/UpdateInformation'
+    import UpdatePhotos from '@/Components/EditShop/UpdatePhotos'
     import UpdateLocation from '@/Components/EditShop/UpdateLocation'
 
     export default {
@@ -25,6 +30,7 @@
             AppLayout,
             JetSectionBorder,
             UpdateInformation,
+            UpdatePhotos,
             UpdateLocation
         }
     }
