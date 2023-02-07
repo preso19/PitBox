@@ -8,13 +8,10 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use App\StateMachines\AppointmentStateMachine;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Asantibanez\LaravelEloquentStateMachines\Traits\HasStateMachines;
-
 
 class Appointment extends Model
 {
     use HasFactory;
-    use HasStateMachines;
 
     /**
      * The attributes that are mass assignable.
